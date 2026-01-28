@@ -15,24 +15,36 @@ datasource db {
 }
 
 model Workflow {
-  id        String   @id @default(cuid())
-  name      String
-  nodes     Json
-  edges     Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  name        String
+  description String?
+  nodes       Json
+  edges       Json
+  status      WorkflowStatus @default(DRAFT)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  FAILED
 }
 
 model User {
-  id            String    @id
+  id            String     @id
   name          String
   email         String
-  emailVerified Boolean   @default(false)
+  emailVerified Boolean    @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
+  workflows     Workflow[]
 
   @@unique([email])
   @@map("user")

@@ -1,14 +1,41 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
+import {
+  createTRPCRouter,
+  baseProcedure,
+  protectedProcedure,
+} from "../trpc/init";
 
-export const workflowRouter = router({
-  list: publicProcedure.query(() => prisma.workflow.findMany()),
-  create: publicProcedure
-    .input(z.object({ name: z.string() }))
-    .mutation(({ input }) =>
-      prisma.workflow.create({
-        data: { name: input.name, nodes: [], edges: [] },
+export const workflowRouter = createTRPCRouter({
+  list: baseProcedure.query(() => prisma.workflow.findMany()),
+  create: protectedProcedure
+    .input(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
       })
-    ),
+    )
+    .mutation(async ({ input, ctx }) => {
+      return prisma.workflow.create({
+        data: {
+          name: input.name,
+          description: input.description,
+          userId: ctx.user.id,
+          nodes: [],
+          edges: [],
+        },
+      });
+    }),
+
+  hello: baseProcedure
+    .input(
+      z.object({
+        text: z.string(),
+      })
+    )
+    .query((opts) => {
+      return {
+        greeting: `hello ${opts.input.text}`,
+      };
+    }),
 });
