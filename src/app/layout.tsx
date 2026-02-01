@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 // @ts-ignore
 import "./globals.css";
+import "@xyflow/react/dist/style.css";
 import { Toaster } from "sonner";
 import { TRPCReactProvider } from "@/providers/TRPCProvider";
 import { HydrateClient } from "@/server/trpc/server";

@@ -6,7 +6,7 @@ import {
 import { cache } from "react";
 import { createTRPCContext } from "./init";
 import { makeQueryClient } from "@/server/trpc/query-client";
-import { appRouter } from "../routers/_app";
+import { appRouter } from "../api/routers/_app";
 import { createTRPCClient, httpLink } from "@trpc/client";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 // IMPORTANT: Create a stable getter for the query client that
