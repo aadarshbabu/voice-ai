@@ -41,6 +41,7 @@ const nodeTypes = {
     [NODE_TYPES.TOOL]: BaseNode,
     [NODE_TYPES.LLM_REPLY]: BaseNode,
     [NODE_TYPES.AI_AGENT]: BaseNode,
+    [NODE_TYPES.WEBHOOK]: BaseNode,
     [NODE_TYPES.END]: BaseNode,
 };
 
@@ -86,8 +87,10 @@ function CanvasInner({ workflowId, onValidationChange, activeNodeId, onChange, r
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
-    const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [validation, setValidation] = useState<ValidationResult>({ isValid: true, errors: [] });
+
+    const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
     // Refs for stability and to prevent save loops
     const lastSavedDataRef = React.useRef<string>("");
@@ -186,7 +189,7 @@ function CanvasInner({ workflowId, onValidationChange, activeNodeId, onChange, r
     );
 
     const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-        setSelectedNode(node);
+        setSelectedNodeId(node.id);
     }, []);
 
     const onConfigChange = useCallback((nodeId: string, newData: any) => {
@@ -345,8 +348,8 @@ function CanvasInner({ workflowId, onValidationChange, activeNodeId, onChange, r
 
             <NodeConfigDrawer
                 selectedNode={selectedNode}
-                isOpen={!!selectedNode}
-                onClose={() => setSelectedNode(null)}
+                isOpen={!!selectedNodeId}
+                onClose={() => setSelectedNodeId(null)}
                 onDataChange={onConfigChange}
             />
         </div>

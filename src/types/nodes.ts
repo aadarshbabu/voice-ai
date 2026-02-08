@@ -6,6 +6,7 @@ export const NODE_TYPES = {
     TOOL: 'tool',
     LLM_REPLY: 'llm-reply',
     AI_AGENT: 'ai-agent',  // New: AI Agent with tool calling
+    WEBHOOK: 'webhook',    // New: External Webhook Trigger/Resume
     END: 'end',
 } as const;
 
@@ -71,6 +72,13 @@ export const DEFAULT_NODE_DATA: Record<NodeType, any> = {
         maxIterations: 3,  // Max tool calls before responding
         saveAs: 'agent_response',
         decisionMode: 'auto',  // 'auto' | 'manual' - auto means AI decides
+    },
+    [NODE_TYPES.WEBHOOK]: {
+        label: 'Webhook',
+        slug: '',
+        authType: 'none', // 'none' | 'bearer'
+        sharedSecret: '',
+        variableMapping: [], // Array of { path: '$.body.id', variable: 'user_id' }
     },
     [NODE_TYPES.END]: { label: 'End Session' },
 };

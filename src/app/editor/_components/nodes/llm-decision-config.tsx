@@ -66,12 +66,12 @@ export function LLMDecisionConfig({ data, onChange }: LLMDecisionConfigProps) {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center gap-3 pb-2">
-                <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg">
                     <BrainCircuit className="h-5 w-5" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-sm">AI Decision Node</h3>
-                    <p className="text-xs text-muted-foreground">Route based on AI classification</p>
+                    <h3 className="font-semibold text-sm">AI Logic Router</h3>
+                    <p className="text-xs text-muted-foreground italic">Intelligent classification and routing</p>
                 </div>
             </div>
 

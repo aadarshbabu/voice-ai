@@ -16,6 +16,7 @@ import { LLMDecisionConfig } from './nodes/llm-decision-config';
 import { LLMReplyConfig } from './nodes/llm-reply-config';
 import { ToolNodeConfig } from './nodes/tool-config';
 import { AIAgentConfig } from './nodes/ai-agent-config';
+import { WebhookNodeConfig } from './nodes/webhook-config';
 import { Settings2 } from 'lucide-react';
 
 interface NodeConfigDrawerProps {
@@ -73,6 +74,13 @@ export function NodeConfigDrawer({
             case NODE_TYPES.AI_AGENT:
                 return (
                     <AIAgentConfig
+                        data={selectedNode.data}
+                        onChange={(newData) => onDataChange(selectedNode.id, newData)}
+                    />
+                );
+            case NODE_TYPES.WEBHOOK:
+                return (
+                    <WebhookNodeConfig
                         data={selectedNode.data}
                         onChange={(newData) => onDataChange(selectedNode.id, newData)}
                     />

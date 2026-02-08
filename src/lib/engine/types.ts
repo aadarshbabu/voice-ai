@@ -116,6 +116,16 @@ export const AIAgentNodeDataSchema = z.object({
   saveAs: z.string().default('agent_response'),
   llmConfig: LLMConfigSchema.optional(),
 });
+ 
+export const WebhookNodeDataSchema = z.object({
+  slug: z.string().default(''),
+  authType: z.enum(['none', 'bearer']).default('none'),
+  sharedSecret: z.string().optional(),
+  variableMapping: z.array(z.object({
+    path: z.string(), // JSONPath or dot notation
+    variable: z.string(),
+  })).default([]),
+});
 
 export type SpeakNodeData = z.infer<typeof SpeakNodeDataSchema>;
 export type ListenNodeData = z.infer<typeof ListenNodeDataSchema>;
@@ -124,6 +134,7 @@ export type LLMDecisionNodeData = z.infer<typeof LLMDecisionNodeDataSchema>;
 export type ToolNodeData = z.infer<typeof ToolNodeDataSchema>;
 export type AgentTool = z.infer<typeof AgentToolSchema>;
 export type AIAgentNodeData = z.infer<typeof AIAgentNodeDataSchema>;
+export type WebhookNodeData = z.infer<typeof WebhookNodeDataSchema>;
 export type LLMConfig = z.infer<typeof LLMConfigSchema>;
 
 // ============================================
@@ -164,6 +175,7 @@ export type AdvanceResult = {
         sttProvider?: 'elevenlabs' | 'deepgram' | 'google';
         language?: string;
       }
+    | { type: 'wait_for_webhook'; nodeId: string; slug: string }
     | { type: 'speak'; text: string; nodeId: string; audioBase64?: string; mimeType?: string }
     | { type: 'completed' }
     | { type: 'error'; message: string };

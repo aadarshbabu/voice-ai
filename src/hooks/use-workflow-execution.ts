@@ -15,10 +15,9 @@ export type WorkflowExecutionState = {
   pendingInputs: string[];
   lastSyncedUserMsgCount: number;
   connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
-  // Voice input configuration from LISTEN node
-  inputMode?: 'text' | 'stt';
-  sttProvider?: 'elevenlabs' | 'deepgram' | 'google';
   language?: string;
+  // Webhook trigger configuration
+  webhookSlug?: string;
   // Audio output from SPEAK node (for TTS playback)
   pendingAudio?: {
     audioBase64: string;
@@ -37,9 +36,8 @@ const INITIAL_STATE: WorkflowExecutionState = {
   pendingInputs: [],
   lastSyncedUserMsgCount: 0,
   connectionStatus: 'disconnected',
-  inputMode: undefined,
-  sttProvider: undefined,
   language: undefined,
+  webhookSlug: undefined,
   pendingAudio: undefined,
 };
 
@@ -146,6 +144,11 @@ export function useWorkflowExecution(workflowId: string) {
             language = action.language || 'eng';
           }
 
+          let webhookSlug = prev.webhookSlug;
+          if (action?.type === 'wait_for_webhook') {
+            webhookSlug = action.slug;
+          }
+
           // Capture audio from SPEAK nodes for TTS playback
           // ONLY update pendingAudio if we actually get a speak action
           // Don't clear it on other updates (like progress updates)
@@ -170,6 +173,7 @@ export function useWorkflowExecution(workflowId: string) {
             inputMode,
             sttProvider,
             language,
+            webhookSlug,
             // TTS audio output
             pendingAudio,
           };

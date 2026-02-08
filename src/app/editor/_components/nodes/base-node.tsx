@@ -1,7 +1,7 @@
 "use client";
 
-import React, { memo } from 'react';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import React, { memo, useEffect } from 'react';
+import { Handle, Position, useUpdateNodeInternals, type NodeProps, type Node } from '@xyflow/react';
 import { Card } from "@/components/ui/card";
 import {
     Mic2,
@@ -12,6 +12,7 @@ import {
     SquarePlay,
     CircleStop,
     Bot,
+    Webhook,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useValidationContext } from '../validation-context';
@@ -24,6 +25,7 @@ const ICON_MAP: Record<string, any> = {
     tool: Wrench,
     'llm-reply': MessageSquareQuote,
     'ai-agent': Bot,
+    webhook: Webhook,
     end: CircleStop,
 };
 
@@ -35,6 +37,7 @@ const COLOR_MAP: Record<string, string> = {
     tool: 'bg-pink-500',
     'llm-reply': 'bg-indigo-500',
     'ai-agent': 'bg-violet-600',
+    webhook: 'bg-cyan-500',
     end: 'bg-red-500',
 };
 
@@ -46,6 +49,7 @@ const BORDER_MAP: Record<string, string> = {
     tool: 'border-pink-200',
     'llm-reply': 'border-indigo-200',
     'ai-agent': 'border-violet-200',
+    webhook: 'border-cyan-200',
     end: 'border-red-200',
 };
 
@@ -55,7 +59,13 @@ export type BaseNodeData = {
 };
 
 export const BaseNode = memo(({ id, data, type, selected }: NodeProps<Node<BaseNodeData>>) => {
+    const updateNodeInternals = useUpdateNodeInternals();
     const { validation, activeNodeId } = useValidationContext();
+
+    // Trigger update when structure changes (especially for dynamic decision handles)
+    useEffect(() => {
+        updateNodeInternals(id);
+    }, [id, data.outcomes, updateNodeInternals]);
     const Icon = ICON_MAP[type || 'speak'] || Volume2;
     const colorClass = COLOR_MAP[type || 'speak'] || 'bg-gray-500';
     const borderClass = BORDER_MAP[type || 'speak'] || 'border-gray-200';

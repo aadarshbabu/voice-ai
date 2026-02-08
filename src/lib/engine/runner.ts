@@ -11,6 +11,7 @@ import {
   type AIAgentNodeData,
   type AgentTool,
   type LLMConfig,
+  type WebhookNodeData,
 } from './types';
 import { callLLM, callLLMDecision } from './providers/llm';
 import { textToSpeech } from './providers/voice';
@@ -596,6 +597,62 @@ export async function advanceWorkflowAsync(
     }
 
     // =====================
+    // WEBHOOK Node - External Trigger / Junction
+    // =====================
+    case NODE_TYPES.WEBHOOK: {
+      const nodeData = currentNode.data as unknown as WebhookNodeData;
+      const slug = nodeData?.slug || '';
+      
+      // If we don't have input, we wait
+      if (!input) {
+        return {
+          context: { ...context, status: 'waiting', updatedAt: now },
+          action: { type: 'wait_for_webhook', nodeId: currentNodeId, slug },
+        };
+      }
+
+      // We have input (JSON payload as string from the gateway)
+      let payload: any;
+      try {
+        payload = JSON.parse(input);
+      } catch (e) {
+        // Not JSON, or already processed
+        payload = { raw: input };
+      }
+
+      const nextNodeId = getNextNodeId();
+      const mapping = nodeData?.variableMapping || [];
+      const newVariables = { ...variables, webhook_payload: payload };
+
+      // Apply variable mappings
+      for (const m of mapping) {
+        if (m.path && m.variable) {
+          const value = getNestedValue(payload, m.path);
+          if (value !== undefined) {
+             newVariables[m.variable] = value;
+          }
+        }
+      }
+
+      const newTranscript = [
+        ...transcript,
+        { role: 'user' as const, text: input, nodeId: currentNodeId, timestamp: now },
+      ];
+
+      return {
+        context: {
+          ...context,
+          variables: newVariables,
+          transcript: newTranscript,
+          currentNodeId: nextNodeId,
+          status: nextNodeId ? 'running' : 'completed',
+          updatedAt: now,
+        },
+        action: { type: 'continue' },
+      };
+    }
+
+    // =====================
     // END Node
     // =====================
     case NODE_TYPES.END: {
@@ -651,6 +708,7 @@ export async function runWorkflowUntilWait(
 
     // Stop conditions: only stop if we explicitly need to wait, or we are finished/errored
     if (result.action.type === 'wait_for_input' || 
+        result.action.type === 'wait_for_webhook' ||
         result.action.type === 'completed' || 
         result.action.type === 'error') {
       return result;

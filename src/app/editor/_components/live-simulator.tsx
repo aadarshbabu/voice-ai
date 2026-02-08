@@ -45,8 +45,11 @@ import {
     MicOff,
     AudioLines,
     ChevronDown,
+    MicX,
     Volume2,
-    VolumeX
+    VolumeX,
+    Webhook,
+    X,
 } from 'lucide-react';
 import { useWorkflowExecution } from '@/hooks/use-workflow-execution';
 import { useVoiceRecorder } from '@/hooks/use-voice-recorder';
@@ -250,7 +253,21 @@ export function LiveSimulator({
 
     const handleSend = () => {
         if (!userInput.trim() || state?.status !== 'waiting') return;
-        sendInput(userInput);
+
+        // If we're waiting for a webhook, format the input as JSON if possible
+        if (state.webhookSlug) {
+            try {
+                // Try to validate if it's already JSON
+                JSON.parse(userInput);
+                sendInput(userInput);
+            } catch (e) {
+                // If not JSON, wrap it in a simple object
+                sendInput(JSON.stringify({ text: userInput }));
+            }
+        } else {
+            sendInput(userInput);
+        }
+
         setUserInput('');
     };
 
@@ -302,24 +319,35 @@ export function LiveSimulator({
                             </SheetDescription>
                         </div>
 
-                        {state?.sessionId && (
-                            <div className={cn(
-                                "flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-medium transition-all duration-500",
-                                state.connectionStatus === 'connected' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                    state.connectionStatus === 'connecting' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse' :
-                                        'bg-red-500/10 text-red-500 border-red-500/20'
-                            )}>
+                        <div className="flex items-center gap-3">
+                            {state?.sessionId && (
                                 <div className={cn(
-                                    "h-1.5 w-1.5 rounded-full",
-                                    state.connectionStatus === 'connected' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse' :
-                                        state.connectionStatus === 'connecting' ? 'bg-amber-500' :
-                                            'bg-red-500'
-                                )} />
-                                {state.connectionStatus === 'connected' ? 'LIVE' :
-                                    state.connectionStatus === 'connecting' ? 'SYNCING' :
-                                        'OFFLINE'}
-                            </div>
-                        )}
+                                    "flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-medium transition-all duration-500",
+                                    state.connectionStatus === 'connected' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                        state.connectionStatus === 'connecting' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse' :
+                                            'bg-red-500/10 text-red-500 border-red-500/20'
+                                )}>
+                                    <div className={cn(
+                                        "h-1.5 w-1.5 rounded-full",
+                                        state.connectionStatus === 'connected' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse' :
+                                            state.connectionStatus === 'connecting' ? 'bg-amber-500' :
+                                                'bg-red-500'
+                                    )} />
+                                    {state.connectionStatus === 'connected' ? 'LIVE' :
+                                        state.connectionStatus === 'connecting' ? 'SYNCING' :
+                                            'OFFLINE'}
+                                </div>
+                            )}
+
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onClose}
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
                 </SheetHeader>
 
@@ -463,9 +491,23 @@ export function LiveSimulator({
                                                 "relative px-4 py-3 text-sm shadow-sm transition-all",
                                                 msg.role === 'user'
                                                     ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-none'
-                                                    : 'bg-muted/50 border border-muted-foreground/10 rounded-2xl rounded-bl-none text-foreground'
+                                                    : 'bg-muted/50 border border-muted-foreground/10 rounded-2xl rounded-bl-none text-foreground',
+                                                // Handle JSON formatting for webhooks
+                                                msg.text.trim().startsWith('{') && "font-mono text-[11px] leading-relaxed whitespace-pre-wrap"
                                             )}>
-                                                {msg.text}
+                                                {msg.text.trim().startsWith('{') ? (
+                                                    <div className="opacity-90">
+                                                        {(() => {
+                                                            try {
+                                                                return JSON.stringify(JSON.parse(msg.text), null, 2);
+                                                            } catch (e) {
+                                                                return msg.text;
+                                                            }
+                                                        })()}
+                                                    </div>
+                                                ) : (
+                                                    msg.text
+                                                )}
                                                 {(msg as any).audioBase64 && (
                                                     <Button
                                                         size="icon"
@@ -545,6 +587,14 @@ export function LiveSimulator({
                                     )}
                                 </Button>
 
+                                {/* Webhook Trigger Mode Indicator */}
+                                {state?.webhookSlug && (
+                                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 animate-in zoom-in slide-in-from-left-2 shrink-0">
+                                        <Webhook className="h-4 w-4" />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider">Webhook Mode</span>
+                                    </div>
+                                )}
+
                                 {/* Stop Audio Button */}
                                 {audioPlaying && (
                                     <Button
@@ -567,7 +617,9 @@ export function LiveSimulator({
                                                 : voiceStatus === 'processing'
                                                     ? "Processing speech..."
                                                     : state?.status === 'waiting'
-                                                        ? "Type or use voice..."
+                                                        ? state.webhookSlug
+                                                            ? 'Enter JSON payload (e.g. {"test": true})...'
+                                                            : "Type or use voice..."
                                                         : state?.status === 'running'
                                                             ? "Agent is thinking..."
                                                             : "Start a session..."

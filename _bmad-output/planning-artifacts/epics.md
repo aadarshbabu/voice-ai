@@ -112,9 +112,9 @@ Implement the core runtime engine that executes the JSON-based state machines re
 Centralize AI service management. Users can securely configure ElevenLabs, Google AI, and OpenAI credentials via an encrypted UI vault.
 **FRs covered:** FR17.
 
-### Epic 8: Voice Gateway & Intent Parsing
-Enable starting workflows via speech. A dedicated endpoint that transcribes audio and uses semantic mapping to trigger the correct "Trigger" node.
-**FRs covered:** FR18.
+### Epic 8: External Triggers & Voice Gateway
+Enable starting and resuming workflows via external signals. This includes speech-to-intent resolution for voice entry and HTTP Webhooks for third-party system integrations.
+**FRs covered:** FR18, FR22 (Webhook Support).
 
 ### Epic 9: Real-Time Voice Streaming & UI
 The interactive voice experience. High-performance streaming TTS pipeline integrated with a visual "Mic Overlay" showing waveform feedback.
@@ -365,7 +365,6 @@ So that I can configure providers at runtime without sensitive data exposure.
 **Given** a PostgreSQL database with Prisma
 **When** the `provider_configs` table is created with `providerType`, `encryptedConfig`, and `isDefault`
 **Then** a crypto utility must be implemented to encrypt/decrypt the `config_data` using a server-side key.
-
 ### Story 7.2: Provider Management UI (The Vault)
 
 As a platform user,
@@ -379,9 +378,9 @@ So that I can enable voice features for my workflows on demand.
 **Then** the keys are encrypted and saved via tRPC
 **And** the UI must mask the keys once saved.
 
-## Epic 8: Voice Gateway & Intent Parsing
-
-Enable starting workflows via speech using semantic mapping.
+## Epic 8: External Triggers & Voice Gateway
+Enable starting and resuming workflows via external signals. This includes speech-to-intent resolution for voice entry and HTTP Webhooks for third-party system integrations.
+**FRs covered:** FR18, FR22 (Webhook Support).
 
 ### Story 8.1: Voice Capture & Gateway Entry
 As a user,
@@ -405,9 +404,21 @@ So that the agent starts the correct conversation.
 **Then** it returns the `workflowId` and `nodeId` of the best matching trigger
 **And** the engine advances to that node.
 
-## Epic 9: Real-Time Voice Streaming & UI
+### Story 8.3: Webhook Trigger Node
+As a developer,
+I want to trigger my workflows via external HTTP webhooks,
+so that I can integrate my voice agents with third-party systems like CRMs or payment gateways.
 
-The interactive voice experience with low-latency streaming.
+**Acceptance Criteria:**
+1. **New Node Type**: Implementation of a `webhook` node type in the Visual Editor palette and workflow engine.
+2. **Node Configuration Profile**: Support for `slug`, `authType` (Bearer), and `variableMapping` (JSONPath).
+3. **Webhook API Endpoint**: Implementation of `/api/webhooks/[slug]` (POST/GET) to start or resume sessions.
+4. **Engine Support**: `runner.ts` handles `WEBHOOK` node type and `wait_for_webhook` action.
+5. **Observability**: Webhook payload recorded in session trace.
+
+## Epic 9: Real-Time Voice Streaming & UI
+The interactive voice experience. High-performance streaming TTS pipeline integrated with a visual "Mic Overlay" showing waveform feedback.
+**FRs covered:** FR19, FR20.
 
 ### Story 9.1: Streaming TTS Adapter (Google AI)
 As a system,

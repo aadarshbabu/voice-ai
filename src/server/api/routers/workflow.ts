@@ -7,6 +7,8 @@ import {
 } from "../../trpc/init";
 import { CreateWorkflowSchema, UpdateWorkflowSchema } from "@/types/workflow";
 import { TRPCError } from "@trpc/server";
+import { encrypt, decrypt } from "@/lib/crypto";
+import { NODE_TYPES } from "@/types/nodes";
 
 export const workflowRouter = createTRPCRouter({
   list: protectedProcedure.query(({ ctx }) =>
@@ -48,6 +50,23 @@ export const workflowRouter = createTRPCRouter({
         });
       }
 
+      // Decrypt secrets in nodes for the editor
+      if (Array.isArray(workflow.nodes)) {
+        workflow.nodes = (workflow.nodes as any[]).map(node => {
+          if (node.type === NODE_TYPES.WEBHOOK && node.data?.sharedSecret) {
+            try {
+              // Only try to decrypt if it looks like our encrypted format (contains colons)
+              if (node.data.sharedSecret.includes(':')) {
+                node.data.sharedSecret = decrypt(node.data.sharedSecret);
+              }
+            } catch (e) {
+              console.warn(`[Workflow Router] Failed to decrypt sharedSecret for node ${node.id}`);
+            }
+          }
+          return node;
+        });
+      }
+
       return workflow;
     }),
 
@@ -65,10 +84,20 @@ export const workflowRouter = createTRPCRouter({
         });
       }
 
+      // Encrypt secrets in nodes before saving
+      const processedNodes = input.nodes.map(node => {
+        if (node.type === NODE_TYPES.WEBHOOK && node.data?.sharedSecret) {
+          // If it's already encrypted (contains colons) and wasn't changed, we might re-encrypt it
+          // But to be sure, we always encrypt what comes from the client as plain text
+          node.data.sharedSecret = encrypt(node.data.sharedSecret);
+        }
+        return node;
+      });
+
       return prisma.workflow.update({
         where: { id: input.id },
         data: {
-          nodes: input.nodes,
+          nodes: processedNodes,
           edges: input.edges,
         },
       });

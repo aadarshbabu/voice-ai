@@ -81,6 +81,7 @@ development_status:
   epic-8: in-progress
   8-1-voice-capture-and-gateway-entry: review
   8-2-semantic-intent-resolver: review
+  8-3-webhook-trigger-node: review
   epic-8-retrospective: optional
 
   epic-9: backlog

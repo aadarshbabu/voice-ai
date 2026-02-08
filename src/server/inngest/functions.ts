@@ -68,21 +68,36 @@ async function saveTrace(
 
 export const executeWorkflow = inngest.createFunction(
   { id: 'workflow-execute', name: 'Execute Workflow' },
-  { event: 'workflow/execute' },
+  { event: 'workflow/*' },
   async ({ event, step }) => {
-    const { sessionId, workflowId, userInput, llmConfig: eventLlmConfig } = event.data as {
+    const { sessionId, workflowId, userInput, triggerNodeId, webhookPayload, webhookHeaders, llmConfig: eventLlmConfig } = event.data as {
       sessionId: string;
       workflowId: string;
       userInput?: string;
+      triggerNodeId?: string;
+      webhookPayload?: any;
+      webhookHeaders?: Record<string, string>;
       llmConfig?: Partial<LLMConfig>;
     };
 
     // Step 1: Load workflow definition
     const workflow = await step.run('load-workflow', async () => {
+      let targetWorkflowId = workflowId;
+      
+      // If workflowId is missing (resuming), fetch it from the session
+      if (!targetWorkflowId) {
+        const session = await prisma.workflowSession.findUnique({
+          where: { id: sessionId },
+          select: { workflowId: true },
+        });
+        if (!session) throw new Error(`Session ${sessionId} not found`);
+        targetWorkflowId = session.workflowId;
+      }
+
       const wf = await prisma.workflow.findUnique({
-        where: { id: workflowId },
+        where: { id: targetWorkflowId },
       });
-      if (!wf) throw new Error(`Workflow ${workflowId} not found`);
+      if (!wf) throw new Error(`Workflow ${targetWorkflowId} not found`);
       return wf;
     });
 
@@ -95,7 +110,7 @@ export const executeWorkflow = inngest.createFunction(
         where: { id: sessionId },
       });
 
-      if (session?.metadata && typeof session.metadata === 'object') {
+      if (session?.metadata && typeof session.metadata === 'object' && !webhookPayload) {
         // Resume from saved context - metadata stores both context and llmConfig
         const metadata = session.metadata as unknown as SessionData;
         
@@ -115,13 +130,33 @@ export const executeWorkflow = inngest.createFunction(
       }
 
       // Create new context
+      const initialCtx = createInitialContext(sessionId, workflowId);
+      if (triggerNodeId) {
+        initialCtx.currentNodeId = triggerNodeId;
+      }
+      
+      // If we have webhook payload, add it to initial variables
+      if (webhookPayload) {
+        initialCtx.variables = {
+          ...initialCtx.variables,
+          webhook_payload: webhookPayload,
+          webhook_headers: webhookHeaders,
+        };
+      }
+
       return {
-        context: createInitialContext(sessionId, workflowId),
+        context: initialCtx,
         llmConfig: eventLlmConfig,
       };
     });
 
     let context = sessionData.context;
+    let effectiveUserInput = userInput;
+
+    // If webhook payload is direct trigger, we want the Webhook node to process it immediately
+    if (webhookPayload && !effectiveUserInput) {
+      effectiveUserInput = JSON.stringify(webhookPayload);
+    }
     const llmConfig = sessionData.llmConfig;
 
     // Step 3: Run workflow until we need user input or complete
@@ -143,7 +178,7 @@ export const executeWorkflow = inngest.createFunction(
         });
       };
       
-      return runWorkflowUntilWait(nodes, edges, context, userInput, enhancedLlmConfig, onProgress);
+      return runWorkflowUntilWait(nodes, edges, context, effectiveUserInput, enhancedLlmConfig, onProgress);
     });
 
     context = result.context;

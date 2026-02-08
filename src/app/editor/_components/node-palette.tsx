@@ -12,7 +12,8 @@ import {
     SquarePlay,
     CircleStop,
     GripVertical,
-    Bot
+    Bot,
+    Webhook,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_TYPES } from '@/types/nodes';
@@ -25,16 +26,18 @@ const COLOR_MAP: Record<string, string> = {
     [NODE_TYPES.TOOL]: 'bg-pink-500',
     [NODE_TYPES.LLM_REPLY]: 'bg-indigo-500',
     [NODE_TYPES.AI_AGENT]: 'bg-violet-600',
+    [NODE_TYPES.WEBHOOK]: 'bg-cyan-500',
     [NODE_TYPES.END]: 'bg-red-500',
 };
 
 const NODE_TYPES_LIST = [
-    { type: NODE_TYPES.TRIGGER, label: 'Trigger', icon: SquarePlay, description: 'Workflow start point' },
+    { type: NODE_TYPES.TRIGGER, label: 'Start Node', icon: SquarePlay, description: 'Workflow start point' },
     { type: NODE_TYPES.SPEAK, label: 'Speak', icon: Volume2, description: 'TTS voice output' },
     { type: NODE_TYPES.LISTEN, label: 'Listen', icon: Mic2, description: 'STT voice input' },
     { type: NODE_TYPES.AI_AGENT, label: 'AI Agent', icon: Bot, description: 'Agent with tools' },
     { type: NODE_TYPES.LLM_DECISION, label: 'LLM Decision', icon: BrainCircuit, description: 'Branching logic' },
     { type: NODE_TYPES.TOOL, label: 'HTTP Request', icon: Wrench, description: 'Call external API' },
+    { type: NODE_TYPES.WEBHOOK, label: 'Webhook', icon: Webhook, description: 'External trigger/wait' },
     { type: NODE_TYPES.LLM_REPLY, label: 'LLM Reply', icon: MessageSquareQuote, description: 'AI response' },
     { type: NODE_TYPES.END, label: 'End', icon: CircleStop, description: 'Finish workflow' },
 ];

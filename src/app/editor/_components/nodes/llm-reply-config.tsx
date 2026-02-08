@@ -42,12 +42,12 @@ export function LLMReplyConfig({ data, onChange }: LLMReplyConfigProps) {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center gap-3 pb-2">
-                <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-lg">
                     <MessageSquareQuote className="h-5 w-5" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-sm">AI Reply Node</h3>
-                    <p className="text-xs text-muted-foreground">Generate intelligent responses</p>
+                    <h3 className="font-semibold text-sm">AI Text Generator</h3>
+                    <p className="text-xs text-muted-foreground italic">Powered by Large Language Models</p>
                 </div>
             </div>
 
