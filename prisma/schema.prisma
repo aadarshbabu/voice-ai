@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
@@ -15,18 +15,33 @@ datasource db {
 }
 
 model Workflow {
-  id          String         @id @default(cuid())
+  id          String             @id @default(cuid())
   userId      String
-  user        User           @relation(fields: [userId], references: [id])
+  user        User               @relation(fields: [userId], references: [id])
   orgId       String?
   name        String
   description String?
   nodes       Json
   edges       Json
-  status      WorkflowStatus @default(DRAFT)
-  version     Int            @default(1)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  status      WorkflowStatus     @default(DRAFT)
+  version     Int                @default(1)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  sessions    WorkflowSession[]
+  snapshots   WorkflowSnapshot[]
+}
+
+model WorkflowSnapshot {
+  id         String   @id @default(cuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  version    Int
+  nodes      Json
+  edges      Json
+  createdAt  DateTime @default(now())
+
+  @@unique([workflowId, version])
+  @@map("workflow_snapshot")
 }
 
 enum WorkflowStatus {
@@ -38,16 +53,18 @@ enum WorkflowStatus {
 }
 
 model User {
-  id            String     @id
-  name          String
-  email         String
-  emailVerified Boolean    @default(false)
-  image         String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @default(now()) @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  workflows     Workflow[]
+  id              String           @id
+  name            String
+  email           String
+  emailVerified   Boolean          @default(false)
+  image           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  workflows       Workflow[]
+  credentials     LLMCredential[]
+  providerConfigs ProviderConfig[]
 
   @@unique([email])
   @@map("user")
@@ -96,4 +113,82 @@ model Verification {
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("verification")
+}
+
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+  ERROR
+}
+
+model WorkflowSession {
+  id         String           @id @default(cuid())
+  workflowId String
+  workflow   Workflow         @relation(fields: [workflowId], references: [id])
+  status     SessionStatus    @default(ACTIVE)
+  metadata   Json?            @default("{}")
+  startedAt  DateTime         @default(now())
+  endedAt    DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  traces     ExecutionTrace[]
+
+  @@map("workflow_session")
+}
+
+model ExecutionTrace {
+  id             String          @id @default(cuid())
+  sessionId      String
+  session        WorkflowSession @relation(fields: [sessionId], references: [id])
+  nodeId         String
+  inputVariables Json?           @default("{}")
+  outputData     Json?           @default("{}")
+  logs           Json?           @default("[]")
+  createdAt      DateTime        @default(now())
+
+  @@map("execution_trace")
+}
+
+enum LLMProvider {
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+  MISTRAL
+}
+
+enum ProviderType {
+  GOOGLE
+  ELEVENLABS
+  OPENAI
+  DEEPGRAM
+}
+
+model LLMCredential {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  String
+  model     String?
+  apiKey    String
+  baseUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@map("llm_credential")
+}
+
+model ProviderConfig {
+  id              String       @id @default(cuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgId           String?
+  providerType    ProviderType
+  encryptedConfig String // Encrypted JSON string
+  isDefault       Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([userId, providerType])
+  @@map("provider_config")
 }

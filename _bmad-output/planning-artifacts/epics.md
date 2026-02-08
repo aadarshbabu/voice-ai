@@ -1,6 +1,7 @@
----
 stepsCompleted: [1, 2, 3, 4]
 inputDocuments: ['/Users/aadarsh/dev/voice-ai/.github/workflow_based_voice_ai_agent_platform_project_plan.md', '/Users/aadarsh/dev/voice-ai/_bmad-output/planning-artifacts/architecture.md']
+status: 'complete'
+completedAt: '2026-02-08T20:41:45+05:30'
 ---
 
 # voice-ai - Epic Breakdown
@@ -28,6 +29,12 @@ FR12: Workflow Serialization: Transform React Flow graph into authorized backend
 FR13: Versioning Lifecycle: Draft -> Validate -> Publish (Immutable).
 FR14: Text Simulator (Test Mode): Debug workflows step-by-step with visual node highlighting.
 FR15: Observability UI: View chronological session traces, variable states, and LLM logs.
+FR16: Durable Execution Logic: Reliable workflow runtime using Inngest.
+FR17: Dynamic Provider Vault: Secure, encrypted storage for ElevenLabs, Google, and OpenAI keys reachable at runtime.
+FR18: Voice Trigger Gateway: Semantic intent resolution to start workflows from raw audio speech.
+FR19: Streaming TTS Pipeline: Low-latency audio delivery using ReadableStreams (TTFW < 1s).
+FR20: Audio Visualization UI: Mic overlay with real-time waveform for capture and playback status.
+FR21: Node-Level Voice Overrides: Ability to configure specific voices/providers within 'Speak' node configuration.
 
 ### NonFunctional Requirements
 
@@ -35,6 +42,8 @@ NFR1: Determinism: Ensure transitions are predictable based on JSON schema and e
 NFR2: High Performance: UI should minimize latency for graph operations and state updates.
 NFR3: Scalability: Decoupled architecture allowing stateless execution across many sessions.
 NFR4: Debuggability: Full audit trail for every node transition and AI event.
+NFR5: Audio Latency (TTFW): Achieve sub-second response time from "speech end" to "audio start".
+NFR6: Credential Security: Encrypt all third-party API keys at rest in PostgreSQL.
 
 ### Additional Requirements
 
@@ -45,6 +54,9 @@ NFR4: Debuggability: Full audit trail for every node transition and AI event.
 - **Design**: Use default shadcn/ui theme and standard components with minimal customization.
 - **Consistency**: All API interactions must use tRPC for end-to-end type safety.
 - **Validation**: Use Zod for all schema and form validation.
+- **Backward Compatibility**: New voice engine logic must wrap existing `EngineRunner` without breaking text-based simulation.
+- **Streaming Support**: Next.js route handlers must support `ReadableStream` for TTS delivery.
+- **Provider Encryption**: Use `node:crypto` (AES-256-GCM) for storing provider secrets in the DB.
 
 ### FR Coverage Map
 
@@ -63,6 +75,12 @@ FR12: Epic 2 - JSON Serialization
 FR13: Epic 1 - Publish/Versioning lifecycle
 FR14: Epic 4 - Step-by-step simulator
 FR15: Epic 5 - Session observability UI
+FR16: Epic 6 - Durable Execution Logic
+FR17: Epic 7 - Provider Configuration Vault
+FR18: Epic 8 - Voice Gateway & Intent Parsing
+FR19: Epic 9 - Streaming Audio Engine
+FR20: Epic 9 - Voice UI & Visualizers
+FR21: Epic 3 - Node-level Override Configuration
 
 ## Epic List
 
@@ -75,16 +93,32 @@ Provide the visual primary interface. Users can drag nodes from a palette onto a
 **FRs covered:** FR3, FR4, FR5, FR12.
 
 ### Epic 3: Specialized Node Configuration
-Turn visual nodes into functional logic. Users can open configuration drawers for each node type (Speak, Listen, LLM, etc.) and define their variables and prompts using default shadcn forms.
-**FRs covered:** FR6, FR7, FR8, FR9, FR10.
+Turn visual nodes into functional logic. Users can open configuration drawers for each node type (Speak, Listen, LLM, etc.) and define their variables and prompts.
+**FRs covered:** FR6, FR7, FR8, FR9, FR10, FR21.
 
 ### Epic 4: Graph Integrity & Text Simulation
-Ensure reliability and debuggability. Users get real-time validation for their graphs and can run a text-based simulator to step through the conversation before deployment.
+Ensure reliability and debuggability. Users get real-time validation for their graphs and can run a text-based simulator to step through the conversation.
 **FRs covered:** FR11, FR14.
 
-### Epic 5: Observability & Execution Trace UI
-Provide transparency into AI operations. Users can view chronological session traces, see variable changes, and inspect LLM logs for finished sessions.
+### Epic 5: Session Observability & Execution Trace UI
+Provide transparency into AI operations. Users can view chronological session traces, see variable changes, and inspect LLM logs.
 **FRs covered:** FR15.
+
+### Epic 6: Durable Workflow Execution (Inngest)
+Implement the core runtime engine that executes the JSON-based state machines reliably using Inngest durable functions.
+**FRs covered:** FR16.
+
+### Epic 7: Provider Configuration & Vault
+Centralize AI service management. Users can securely configure ElevenLabs, Google AI, and OpenAI credentials via an encrypted UI vault.
+**FRs covered:** FR17.
+
+### Epic 8: Voice Gateway & Intent Parsing
+Enable starting workflows via speech. A dedicated endpoint that transcribes audio and uses semantic mapping to trigger the correct "Trigger" node.
+**FRs covered:** FR18.
+
+### Epic 9: Real-Time Voice Streaming & UI
+The interactive voice experience. High-performance streaming TTS pipeline integrated with a visual "Mic Overlay" showing waveform feedback.
+**FRs covered:** FR19, FR20.
 
 <!-- Repeat for each epic in epics_list (N = 1, 2, 3...) -->
 
@@ -282,3 +316,117 @@ So that I can understand exactly why an agent reached a certain state.
 **When** they select a node from the execution timeline
 **Then** the UI highlights that node on the (read-only) React Flow canvas
 **And** a side panel shows the exact input variables, the LLM decision/prompt used (if applicable), and the resulting output for that specific step
+
+## Epic 6: Durable Workflow Execution (Inngest)
+
+Implement the core runtime engine that executes the JSON-based state machines reliably. Supports conversational resumes, tool calls, and LLM orchestration via Inngest durable functions.
+
+### Story 6.1: Inngest-Powered Execution Logic
+
+As a system,
+I want to execute workflow transitions using Inngest durable functions,
+So that conversational state is preserved across interruptions and wait states.
+
+**Acceptance Criteria:**
+
+1. **Given** a published workflow and a trigger event
+2. **When** the Inngest function is invoked
+3. **Then** it loads the workflow JSON and current session state from Redis/Postgres
+4. **And** it executes nodes sequentially (Speak -> Listen -> LLM) following directed edges
+5. **And** for 'Listen' nodes, the function pauses (suspends) and waits for a specific 'resume' event
+6. **And** once resumed, it updates the session context with user input and continues to the next node
+
+### Story 6.2: AI & Tool Orchestration within Inngest
+
+As a system,
+I want to handle LLM calls and external tool executions within the durable workflow,
+So that expensive or slow operations are retried reliably and their results persisted.
+
+**Acceptance Criteria:**
+
+1. **Given** the execution reaches an LLM or Tool node
+2. **When** the Inngest step executes
+3. **Then** it calls the respective AI provider (OpenAI/Claude) or Tool registry adapter
+4. **And** it handles retries automatically on transient failures
+5. **And** the result is saved back into the `ExecutionContext` variables before moving to the next node
+
+## Epic 7: Provider Configuration & Vault
+
+Centralize AI service management. Users can securely configure ElevenLabs, Google AI, and OpenAI credentials via an encrypted UI vault.
+
+### Story 7.1: Encrypted Provider Configuration Schema
+
+As a system administrator,
+I want to store AI provider credentials in an encrypted database table,
+So that I can configure providers at runtime without sensitive data exposure.
+
+**Acceptance Criteria:**
+
+**Given** a PostgreSQL database with Prisma
+**When** the `provider_configs` table is created with `providerType`, `encryptedConfig`, and `isDefault`
+**Then** a crypto utility must be implemented to encrypt/decrypt the `config_data` using a server-side key.
+
+### Story 7.2: Provider Management UI (The Vault)
+
+As a platform user,
+I want a secure settings page to input my AI provider keys,
+So that I can enable voice features for my workflows on demand.
+
+**Acceptance Criteria:**
+
+**Given** a user is on the Settings dashboard
+**When** they input their API keys for Google or ElevenLabs
+**Then** the keys are encrypted and saved via tRPC
+**And** the UI must mask the keys once saved.
+
+## Epic 8: Voice Gateway & Intent Parsing
+
+Enable starting workflows via speech using semantic mapping.
+
+### Story 8.1: Voice Capture & Gateway Entry
+As a user,
+I want to click a mic button and speak my intent,
+So that I can start a workflow without typing.
+
+**Acceptance Criteria:**
+**Given** a user clicks the "Mic" button
+**When** they stop speaking
+**Then** the audio is POSTed to `/api/voice/command`
+**And** the UI shows a "Processing..." state.
+
+### Story 8.2: Semantic Intent Resolver
+As a system,
+I want to map user speech to the most relevant workflow trigger node,
+So that the agent starts the correct conversation.
+
+**Acceptance Criteria:**
+**Given** a transcript from the STT provider
+**When** the Resolver LLM analyzes published workflows
+**Then** it returns the `workflowId` and `nodeId` of the best matching trigger
+**And** the engine advances to that node.
+
+## Epic 9: Real-Time Voice Streaming & UI
+
+The interactive voice experience with low-latency streaming.
+
+### Story 9.1: Streaming TTS Adapter (Google AI)
+As a system,
+I want to stream audio chunks to the browser as they are generated,
+So that the user hears the agent speak immediately (TTFW < 1s).
+
+**Acceptance Criteria:**
+**Given** a `Speak` node execution
+**When** the TTS provider starts generating audio
+**Then** the server responds with a `ReadableStream` of audio data
+**And** the client begins playback while the stream is still downloading.
+
+### Story 9.2: Audio Visualization UI
+As a user,
+I want to see visual feedback when I am speaking or when the agent is speaking,
+So that I know the system is active.
+
+**Acceptance Criteria:**
+**Given** an active voice session
+**When** status is 'listening' or 'speaking'
+**Then** a waveform visualizer renders in the chat interface
+**And** it reflects the actual audio volume/frequency.

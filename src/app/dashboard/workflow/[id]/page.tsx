@@ -6,6 +6,7 @@ import {
   useNodesState,
   useEdgesState,
   addEdge,
+  type Connection,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -13,7 +14,7 @@ export default function WorkflowBuilder() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  const onConnect = (connection) => setEdges((eds) => addEdge(connection, eds));
+  const onConnect = (connection: Connection) => setEdges((eds) => addEdge(connection, eds));
 
   return (
     <div className="mx-2 my-1">

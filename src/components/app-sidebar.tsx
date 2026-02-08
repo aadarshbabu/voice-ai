@@ -129,17 +129,17 @@ const data = {
   documents: [
     {
       name: "Vault",
-      url: "#",
+      url: "dashboard/vault",
       icon: IconDatabase,
     },
     {
       name: "Reports",
-      url: "#",
+      url: "dashboard/reports",
       icon: IconReport,
     },
     {
       name: "Logs",
-      url: "#",
+      url: "dashboard/logs",
       icon: IconFileWord,
     },
   ],

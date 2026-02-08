@@ -1,4 +1,4 @@
-# generated: 2026-01-29T01:32:58+05:30
+# generated: 2026-02-08T20:33:31+05:30
 # project: voice-ai
 # project_key: voice-ai
 # tracking_system: file-system
@@ -33,7 +33,7 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-01-29T01:32:58+05:30
+generated: 2026-02-08T20:33:31+05:30
 project: voice-ai
 project_key: voice-ai
 tracking_system: file-system
@@ -48,22 +48,42 @@ development_status:
 
   epic-2: in-progress
   2-1-canvas-initialization-node-palette: done
-  2-2-directed-edge-connectivity: backlog
-  2-3-workflow-serialization-auto-save: backlog
+  2-2-directed-edge-connectivity: review
+  2-3-workflow-serialization-auto-save: review
   epic-2-retrospective: optional
 
-  epic-3: backlog
-  3-1-speak-listen-node-configuration: backlog
-  3-2-llm-node-configuration-decision-reply: backlog
-  3-3-tool-node-configuration: backlog
+  epic-3: in-progress
+  3-1-speak-listen-node-configuration: review
+  3-2-llm-node-configuration-decision-reply: review
+  3-3-tool-node-configuration: review
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-real-time-graph-validation: backlog
-  4-2-step-by-step-text-simulator: backlog
+  epic-4: in-progress
+  4-1-real-time-graph-validation: review
+  4-2-step-by-step-text-simulator: review
   epic-4-retrospective: optional
 
-  epic-5: backlog
-  5-1-session-history-list: backlog
-  5-2-chronological-node-trace-ui: backlog
+  epic-5: done
+  5-1-session-history-list: done
+  5-2-chronological-node-trace-ui: done
   epic-5-retrospective: optional
+
+  epic-6: in-progress
+  6-1-inngest-powered-execution-logic: review
+  6-2-ai-tool-orchestration-within-inngest: backlog
+  epic-6-retrospective: optional
+
+  epic-7: in-progress
+  7-1-encrypted-provider-configuration-schema: review
+  7-2-provider-management-ui-the-vault: review
+  epic-7-retrospective: optional
+
+  epic-8: in-progress
+  8-1-voice-capture-and-gateway-entry: review
+  8-2-semantic-intent-resolver: review
+  epic-8-retrospective: optional
+
+  epic-9: backlog
+  9-1-streaming-tts-adapter-google-ai: backlog
+  9-2-audio-visualization-ui: backlog
+  epic-9-retrospective: optional

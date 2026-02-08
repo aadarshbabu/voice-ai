@@ -6,7 +6,7 @@ project_name: 'voice-ai'
 user_name: 'Aadarsh'
 lastStep: 8
 status: 'complete'
-completedAt: '2026-01-29T01:21:29+05:30'
+completedAt: '2026-02-08T20:23:45+05:30'
 date: '2026-01-29T01:06:55+05:30'
 ---
 
@@ -166,6 +166,39 @@ npx create-t3-app@latest ./ --platform="vercel" --styling="tailwind" --trpc="tru
 *   Engine-level: Nodes must transition to a dedicated `error` node on unhandled failures.
 *   UI-level: Status bar MUST reflect `status: 'idle' | 'listening' | 'processing' | 'speaking'`.
 
+### Voice & Workflow Integration (Architecture Update)
+
+**Refined Execution Model:**
+- **Voice as Trigger**: User speech while idle is transcribed and sent to the `IntentDispatcher`, which performs a semantic match against all published **Workflow Trigger** nodes.
+- **Voice as Input**: User speech during an active session is routed to the waiting **Listen Node**, rehydrating the `ExecutionContext` and advancing the state machine.
+- **Zero Static Logic**: No hardcoded "if command == 'x'" logic. All system responses are defined by the `Speak` nodes within the active visual workflow.
+
+### Project Structure & Boundaries (Refined)
+
+```text
+voice-ai/
+├── src/
+│   ├── app/api/voice/
+│   │   ├── command/route.ts      # Intent Dispatcher (Audio -> Workflow Event)
+│   │   └── tts/route.ts          # Streaming TTS Gateway
+│   ├── components/voice/
+│   │   ├── mic-overlay.tsx       # Global voice control UI
+│   │   └── audio-streamer.tsx    # PCM-to-WAV playback bridge
+│   ├── lib/engine/
+│   │   ├── gateway/
+│   │   │   ├── intent-resolver.ts # LLM-based speech-to-trigger mapping
+│   │   │   └── stt-buffer.ts      # Audio chunk processing
+│   │   └── providers/
+│   │       ├── factory.ts         # Injects ElevenLabs/Google/OpenAI
+│   │       └── adapters/          # Specific provider implementations
+│   ├── hooks/
+│   │   └── use-workflow-voice.ts  # Bridging UI events to Engine SSE
+```
+
+### Architectural Boundaries
+- **Engine Purity**: The `IntentDispatcher` must only emit `WorkflowEvents`. It is forbidden from calling UI components or direct database writes outside of the `ExecutionContext`.
+- **Provider Isolation**: Provider-specific SDK logic (like the Google GenAI snippet) must be wrapped in adapters to allow "on-demand" switching via the `ProviderConfig` table.
+
 ### Enforcement Guidelines
 
 **All AI Agents MUST:**
@@ -282,6 +315,38 @@ Naming conventions, event formats, and error-handling processes are established.
 *   Strong isolation of core business logic (The Engine).
 *   End-to-end type safety from DB to UI.
 *   High-performance event-driven model.
+## Architecture Validation Results (Voice Refinement)
+
+### Coherence Validation ✅
+
+**Decision Compatibility:**
+The use of **Next.js streaming responses** with the **Google GenAI TTS** (and equivalent) is highly compatible. The `ReadableStream` approach ensures that audio data is sent to the client in chunks, maintaining a low memory footprint on the server.
+
+**Pattern Consistency:**
+The **Workflow-Driven Voice Event** pattern aligns perfectly with our existing deterministic engine. By treating voice as a standard `data` input for `Listen` nodes, we maintain complete consistency in session history and tracing.
+
+### Requirements Coverage Validation ✅
+
+**Functional Requirements:**
+- **Voice Commands**: Supported via the `IntentResolver` service.
+- **Dynamic Config**: Supported via the `provider_configs` table and `ProviderFactory`.
+- **Low Latency**: Addressed through SSE and streaming adapter implementations.
+
+### Architecture Readiness Assessment
+
+**Overall Status:** READY FOR IMPLEMENTATION
+
+**Confidence Level:** HIGH
+
+**Key Strengths:**
+- **Dynamic Provider Switching**: Ability to switch from ElevenLabs to Google AI at runtime without code changes.
+- **Pure Engine Logic**: The engine remains agnostic of the audio transport layer, facilitating easier unit testing.
+- **Scalable Intent Mapping**: Using LLMs for intent mapping allows the system to scale to hundreds of workflows without complex regex/conditional trees.
+
+### Implementation Handoff
+
+**First Implementation Priority:**
+Initialize the encrypted provider configuration vault and the base TTS/STT adapter interfaces.
 
 ### Implementation Handoff
 
@@ -290,4 +355,28 @@ Initialize the project using the following command:
 ```bash
 npx create-t3-app@latest ./ --platform="vercel" --styling="tailwind" --trpc="true" --prisma="true" --nextAuth="false" --appRouter="true" --importAlias="~/" --noGit="true" --noInstall="true"
 ```
-.ts`
+## Voice & Dynamic Configuration (Architecture Update)
+
+### Refined Critical Decisions
+
+**Decided during refinement:**
+- **Provider Orchestration**: Transition from environment-variable-only to **Encrypted Database Storage** for AI provider credentials. This enables runtime configuration for ElevenLabs, OpenAI, and Google AI "on demand."
+- **Voice Command Parsing**: Centralized "Voice Gateway" model. The frontend captures audio via `MediaRecorder` and POSTs to `/api/voice/command`. The backend performs STT -> LLM intent mapping.
+- **Streaming TTS**: Utilize **ReadableStreams** with inline PCM-to-WAV conversion (as per the Google GenAI snippet) to provide sub-second voice responses.
+
+### Data Architecture (Updated)
+- **New Table**: `provider_configs`.
+- **Fields**: `id`, `provider_type` (e.g., 'ELEVENLABS', 'GOOGLE_TTS'), `config_data` (encrypted JSON), `is_default` (boolean).
+- **Rationale**: Decouples logic from specific account keys, making the system multi-tenant ready.
+
+### AI Integration Patterns (Refined)
+- **TTS Adapter Interface**:
+  - `generateStream(text: string, voiceId: string): Promise<ReadableStream>`
+  - Must handle base64 to Buffer conversion and WAV header injection for non-WAV streams.
+- **STT Adapter Interface**:
+  - `transcribe(audio: Blob): Promise<string>`
+- **Intent Dispatcher**: New service that uses an LLM to map a `string` transcript to a `workflow_id` and `node_id` entry point.
+
+### Communication Patterns (Refined)
+- **Audio Delivery**: Server emits `audio_chunk` events over SSE.
+- **Latency Optimization**: The engine begins streaming audio for a `Speak` node as soon as the first sentence is generated by the LLM, rather than waiting for the full response.

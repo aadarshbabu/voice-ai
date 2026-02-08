@@ -1,8 +1,8 @@
 import { serve } from "inngest/next";
 import { inngest } from "@/server/inngest/client";
-import { appRouter } from "@/server/api/routers/_app";
+import { functions } from "@/server/inngest/functions";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [],
+  functions,
 });

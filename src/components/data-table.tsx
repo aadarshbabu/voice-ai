@@ -370,9 +370,10 @@ export function DataTable({
   const router = useRouter();
 
   const trpc = useTRPC();
-  const { data: str } = useSuspenseQuery(
-    trpc.workflow.hello.queryOptions({ text: "hello" })
-  );
+  // Placeholder if needed in future
+  // const { data: str } = useSuspenseQuery(
+  //   trpc.workflow.hello.queryOptions({ text: "hello" })
+  // );
   const mutation = useMutation(trpc.workflow.create.mutationOptions());
 
   const form = useForm<CreateWorkflowType>({
@@ -541,9 +542,9 @@ export function DataTable({
                           {header.isPlaceholder
                             ? null
                             : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
                         </TableHead>
                       );
                     })}

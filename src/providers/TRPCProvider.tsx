@@ -34,6 +34,7 @@ export function TRPCReactProvider({ children }: { children: React.ReactNode }) {
       links: [
         httpBatchLink({
           url: getUrl(),
+          transformer: superjson,
         }),
       ],
     })

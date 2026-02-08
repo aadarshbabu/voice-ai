@@ -6,4 +6,11 @@ export const CreateWorkflowSchema = z.object({
   orgId: z.string().optional(),
 });
 
+export const UpdateWorkflowSchema = z.object({
+  id: z.string(),
+  nodes: z.array(z.any()),
+  edges: z.array(z.any()),
+});
+
 export type CreateWorkflowInput = z.infer<typeof CreateWorkflowSchema>;
+export type UpdateWorkflowInput = z.infer<typeof UpdateWorkflowSchema>;
