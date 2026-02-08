@@ -303,7 +303,7 @@ export function LiveSimulator({
                 {/* Visual Header Background */}
                 <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
 
-                <SheetHeader className="p-6 pb-4 border-b relative z-10 shrink-0">
+                <SheetHeader className="p-6 pb-4 border-b relative shrink-0">
                     <div className="flex justify-between items-start">
                         <div className="space-y-1">
                             <SheetTitle className="flex items-center gap-2 text-xl font-bold tracking-tight">
@@ -319,7 +319,7 @@ export function LiveSimulator({
                             </SheetDescription>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 pr-8">
                             {state?.sessionId && (
                                 <div className={cn(
                                     "flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-medium transition-all duration-500",
@@ -338,15 +338,6 @@ export function LiveSimulator({
                                             'OFFLINE'}
                                 </div>
                             )}
-
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={onClose}
-                                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                            >
-                                <X className="h-4 w-4" />
-                            </Button>
                         </div>
                     </div>
                 </SheetHeader>
