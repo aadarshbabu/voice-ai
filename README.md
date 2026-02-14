@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Itrate Workflow 🎙️🤖
 
-## Getting Started
+A next-generation **Voice AI & Workflow Automation** platform. Build, simulate, and deploy sophisticated AI agents with a powerful visual node-based editor.
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?style=flat-square&logo=tailwind-css)
+![Prisma](https://img.shields.io/badge/Prisma-6.x-2D3748?style=flat-square&logo=prisma)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript)
+
+---
+
+## ✨ Key Features
+
+- **Visual Workflow Editor**: Drag-and-drop interface for building AI logic using `@xyflow/react`.
+- **Multimodal AI Support**: Seamlessly integrate with OpenAI, Anthropic, and Google Gemini.
+- **Voice Intelligence**: High-quality Text-to-Speech (TTS) via ElevenLabs and real-time Speech-to-Text (STT).
+- **Live Simulator**: Test and debug your workflows in real-time with an interactive chat and trace viewer.
+- **Workflow Versioning**: Save snapshots of your designs and restore any previous version.
+- **Encrypted Credentials**: Securely store and manage your AI provider API keys.
+- **Background Processing**: Reliable task execution powered by Inngest.
+
+## 🚀 Quick Start
+
+Follow these steps to get the application running on your local machine.
+
+### 1. Prerequisites
+
+- Node.js (v20 or higher)
+- npm or pnpm
+- PostgreSQL database (Neon.tech recommended)
+- [Inngest CLI](https://www.inngest.com/docs/local-development) (recommended for local testing)
+
+### 2. Installation
+
+Clone the repository and install dependencies:
+
+```bash
+git clone <your-repo-url>
+cd voice-ai
+npm install
+```
+
+### 3. Environment Setup
+
+Copy the example environment file and fill in your values:
+
+```bash
+cp .env.example .env.local
+```
+
+Required variables:
+- `DATABASE_URL`: Your PostgreSQL connection string.
+- `BETTER_AUTH_SECRET`: A secure random string for authentication.
+- `ENCRYPTION_KEY`: A 32-byte hex string for encrypting provider credentials.
+
+### 4. Database Initialization
+
+Sync your database schema with Prisma:
+
+```bash
+npx prisma db push
+```
+
+### 5. Start Developing
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+In a separate terminal, start the Inngest dev server to handle background functions:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx inngest-cli@latest dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The app will be available at [http://localhost:3000](http://localhost:3000).
+The Inngest UI will be at [http://localhost:8288](http://localhost:8288).
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Tech Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Framework**: [Next.js 15+](https://nextjs.org/) (App Router)
+- **Visuals**: [@xyflow/react](https://reactflow.dev/) (React Flow)
+- **API**: [tRPC](https://trpc.io/) for end-to-end typesafe APIs.
+- **Auth**: [Better Auth](https://better-auth.com/) for modern authentication.
+- **Database**: [Prisma](https://www.prisma.io/) with PostgreSQL.
+- **Logic**: [Inngest](https://www.inngest.com/) for event-driven workflows.
+- **UI Components**: Radix UI & Lucide Icons.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📖 Architecture
 
-## Deploy on Vercel
+- `src/app`: Next.js pages and layouts.
+- `src/components`: Reusable UI components.
+- `src/lib/engine`: Core workflow execution engine logic.
+- `src/server`: Backend logic, tRPC routers, and Inngest functions.
+- `prisma/`: Database schema and migrations.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

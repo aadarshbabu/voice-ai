@@ -188,6 +188,9 @@ voice-ai/
 │   │   ├── gateway/
 │   │   │   ├── intent-resolver.ts # LLM-based speech-to-trigger mapping
 │   │   │   └── stt-buffer.ts      # Audio chunk processing
+│   │   ├── orchestrator/          # NEW: Real-time turn-taking logic
+│   │   │   ├── turn-machine.ts   # Pure FSM for Voice UX
+│   │   │   └── bridge.ts         # Adapter for advanceWorkflow
 │   │   └── providers/
 │   │       ├── factory.ts         # Injects ElevenLabs/Google/OpenAI
 │   │       └── adapters/          # Specific provider implementations
@@ -198,6 +201,28 @@ voice-ai/
 ### Architectural Boundaries
 - **Engine Purity**: The `IntentDispatcher` must only emit `WorkflowEvents`. It is forbidden from calling UI components or direct database writes outside of the `ExecutionContext`.
 - **Provider Isolation**: Provider-specific SDK logic (like the Google GenAI snippet) must be wrapped in adapters to allow "on-demand" switching via the `ProviderConfig` table.
+- **Orchestrator Isolation**: The `turn-machine.ts` is a pure FSM that manages playback/listen states. It "consults" `advanceWorkflow` but does not modify its internal logic.
+
+### Real-Time Voice Evolution (Superimposed)
+
+To support real-time, interruptible voice (barge-in) without breaking the existing request–response workflow engine, we adopt a **Superimposed Reactive Layer**.
+
+#### 1. The FSM & Orchestrator Pattern
+The system is evolved by wrapping the existing `advanceWorkflow` (Logic Core) in a stateful **Orchestrator**. 
+
+- **Stateful Host**: Maintains the persistent connection (WebSocket/WebRTC) and current `ExecutionState`.
+- **Reactive FSM**: A pure reducer that manages high-speed UX states: `IDLE`, `LISTENING`, `THINKING`, `SPEAKING`, `INTERRUPTED`.
+- **The Wrapper (Consultant)**: When the FSM reaches a "Need Logic" point, it calls the synchronous `advanceWorkflow`.
+
+#### 2. Barge-in (Interruption) Logic
+Interrupts are handled at the **Media/Orchestrator** level, not the Workflow level.
+- `USER_SPEECH_START` event triggers an immediate `MUTE_AGENT` command to the client/gateway.
+- The FSM transitions to `LISTENING`, and the previous `SPEAK` command's text buffer is truncated or discarded.
+- The Workflow engine is notified of the interruption ONLY after a `USER_SPEECH_FINAL` transcript is received.
+
+#### 3. Low Latency Streaming
+- **Synthesized Streaming**: Text tokens from `LLMDecision` or `LLMReply` are piped to the TTS adapter as they arrive.
+- **Pre-emptive Execution**: The Orchestrator can pre-fetch the next node's data while TTS is still playing the current node's audio.
 
 ### Enforcement Guidelines
 

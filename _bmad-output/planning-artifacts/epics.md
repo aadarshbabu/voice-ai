@@ -120,6 +120,14 @@ Enable starting and resuming workflows via external signals. This includes speec
 The interactive voice experience. High-performance streaming TTS pipeline integrated with a visual "Mic Overlay" showing waveform feedback.
 **FRs covered:** FR19, FR20.
 
+### Epic 10: Real-Time Orchestrator & Turn-Taking
+The "Nervous System" of the platform. A superimposed state machine that wraps the existing engine to handle low-latency turn-taking and interruptions.
+**FRs covered:** FR19, FR20.
+
+### Epic 11: Real-Time Media Connectivity
+Reliable audio transport for various channels. Implementing WebRTC for browsers and SIP/RTP gateways for telephony.
+**FRs covered:** FR19.
+
 <!-- Repeat for each epic in epics_list (N = 1, 2, 3...) -->
 
 ## Epic 1: Workspace Management & Workflow Lifecycle
@@ -441,3 +449,49 @@ So that I know the system is active.
 **When** status is 'listening' or 'speaking'
 **Then** a waveform visualizer renders in the chat interface
 **And** it reflects the actual audio volume/frequency.
+
+## Epic 10: Real-Time Orchestrator & Turn-Taking
+The "Nervous System" of the platform. A superimposed state machine that wraps the existing engine to handle low-latency turn-taking and interruptions.
+**FRs covered:** FR19, FR20.
+
+### Story 10.1: Reactive Turn-Taking FSM
+As a developer,
+I want a pure state machine to manage voice UX states (Listening, Speaking, Interrupted),
+So that the system feels natural and responsive.
+
+**Acceptance Criteria:**
+1. **Pure Reducer**: Implementation of a state machine that transitions between `LISTENING`, `THINKING`, `SPEAKING`.
+2. **Interrupt Logic**: Transition to `INTERRUPTED` state immediately upon receipt of `USER_SPEECH_START`.
+3. **Effect Emission**: The FSM emits "Effects" (e.g., `EMIT_STOP_AUDIO`, `CALL_ENGINE`) instead of performing side-effects.
+
+### Story 10.2: The Engine Orchestrator Wrapper
+As a system,
+I want a wrapper that "consults" the existing advanceWorkflow engine,
+So that I can evolve to real-time voice without breaking existing logic.
+
+**Acceptance Criteria:**
+1. **State Bridge**: Implementation of a bridge that translates FSM transitions into `advanceWorkflow` calls.
+2. **Session Persistence**: Rehydrates `ExecutionContext` from Redis/Postgres before each logic step.
+3. **Buffer Management**: Manages truncation of text-to-speech buffers when an interruption occurs.
+
+## Epic 11: Real-Time Media Connectivity
+Reliable audio transport for various channels. Implementing WebRTC for browsers and SIP/RTP gateways for telephony.
+**FRs covered:** FR19.
+
+### Story 11.1: WebRTC Audio Transport
+As a browser user,
+I want my audio to be streamed via WebRTC,
+So that I experience the lowest possible latency during voice sessions.
+
+**Acceptance Criteria:**
+1. **Signaling Server**: Implementation of a WebRTC signaling path to establish peer connections.
+2. **Opus-to-PCM Gateway**: Real-time transcoding of browser Opus streams to PCM for the ASR layer.
+
+### Story 11.2: SIP/RTP Media Gateway
+As a phone user,
+I want to interact with the voice agent via a standard phone call,
+So that the platform supports traditional telephony.
+
+**Acceptance Criteria:**
+1. **SIP Trunk Integration**: Support for receiving calls via SIP providers (e.g., Twilio, Telnyx).
+2. **RTP Stream Processing**: Connecting the RTP audio stream to the platform's Event Bus.
