@@ -16,6 +16,11 @@ export type WorkflowExecutionState = {
   lastSyncedUserMsgCount: number;
   connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
   language?: string;
+  // Voice input configuration
+  inputMode?: 'text' | 'voice';
+  sttProvider?: string;
+  // Voice FSM state (Listening, Thinking, Speaking)
+  fsmState?: 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING' | 'INTERRUPTED';
   // Webhook trigger configuration
   webhookSlug?: string;
   // Audio output from SPEAK node (for TTS playback)
@@ -36,7 +41,10 @@ const INITIAL_STATE: WorkflowExecutionState = {
   pendingInputs: [],
   lastSyncedUserMsgCount: 0,
   connectionStatus: 'disconnected',
+  fsmState: 'IDLE',
   language: undefined,
+  inputMode: 'text',
+  sttProvider: undefined,
   webhookSlug: undefined,
   pendingAudio: undefined,
 };
@@ -97,8 +105,41 @@ export function useWorkflowExecution(workflowId: string) {
         const ctx = data.context;
         const action = data.action;
 
+        // Defensive check: if no context is provided (e.g. from reactive orchestrator),
+        // we fallback to current state for context-dependent fields.
+        if (!ctx) {
+          setState(prev => ({
+            ...prev,
+            status: data.status?.toLowerCase() || prev.status,
+            // If the message has an action, we might want to capture it
+            ...(action?.type === 'speak' ? {
+              pendingAudio: {
+                audioBase64: action.audioBase64,
+                mimeType: action.mimeType,
+                text: action.text,
+              }
+            } : {})
+          }));
+          return;
+        }
+
         setState((prev) => {
-          const syncedTranscript = ctx.transcript || [];
+          console.log('[SSE] Processing update:', { status: data.status, fsm: data.fsmState, msgs: ctx.transcript?.length });
+          
+          let syncedTranscript = [...(ctx.transcript || [])];
+          
+          // If we have a turnContext with a transcript that isn't in ctx yet, 
+          // add it optimistically. (e.g. while engine is THINKING)
+          const latestVoiceTranscript = data.turnContext?.lastTranscript;
+          if (latestVoiceTranscript && !syncedTranscript.some((m: any) => m.text === latestVoiceTranscript)) {
+            syncedTranscript.push({
+              role: 'user' as const,
+              text: latestVoiceTranscript,
+              timestamp: new Date().toISOString(),
+              isOptimistic: true
+            });
+          }
+
           const serverUserMsgs = syncedTranscript.filter((m: any) => m.role === 'user');
           
           const newServerUserMsgs = serverUserMsgs.slice(prev.lastSyncedUserMsgCount);
@@ -176,6 +217,7 @@ export function useWorkflowExecution(workflowId: string) {
             webhookSlug,
             // TTS audio output
             pendingAudio,
+            fsmState: data.fsmState || prev.fsmState,
           };
         });
       } catch (error) {

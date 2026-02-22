@@ -44,8 +44,6 @@ import {
     Mic,
     MicOff,
     AudioLines,
-    ChevronDown,
-    MicX,
     Volume2,
     VolumeX,
     Webhook,
@@ -58,8 +56,26 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { useWebRTCSession } from '@/hooks/use-webrtc-session';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+/**
+ * Component to handle playing back the remote WebRTC audio stream
+ */
+function RemoteAudio({ track }: { track: MediaStreamTrack | null }) {
+    const audioRef = useRef<HTMLAudioElement>(null);
+
+    useEffect(() => {
+        if (track && audioRef.current) {
+            const stream = new MediaStream([track]);
+            audioRef.current.srcObject = stream;
+            audioRef.current.play().catch(console.error);
+        }
+    }, [track]);
+
+    return <audio ref={audioRef} autoPlay style={{ display: 'none' }} />;
+}
 
 interface LiveSimulatorProps {
     isOpen: boolean;
@@ -164,6 +180,55 @@ export function LiveSimulator({
     const scrollRef = useRef<HTMLDivElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const { state, start, sendInput, reset, clearPendingAudio, isLoading } = useWorkflowExecution(workflowId);
+
+    // WebRTC Voice Mode
+    const [isVoiceMode, setIsVoiceMode] = useState(false);
+    const [remoteTrack, setRemoteTrack] = useState<MediaStreamTrack | null>(null);
+
+    const {
+        status: webrtcStatus,
+        connect: connectWebRTC,
+        disconnect: disconnectWebRTC,
+        isMuted: isWebRTCMuted,
+        mute: muteWebRTC,
+        unmute: unmuteWebRTC,
+        audioLevel: webrtcAudioLevel,
+        error: webrtcError
+    } = useWebRTCSession({
+        sessionId: state?.sessionId || '',
+        onRemoteTrack: (track) => {
+            console.log('[WebRTC] Received remote audio track');
+            setRemoteTrack(track);
+        },
+        onConnected: () => {
+            toast.success("Voice connection established", { icon: <Mic className="h-4 w-4" /> });
+        },
+        onDisconnected: () => {
+            setRemoteTrack(null);
+        },
+        onError: (err) => {
+            toast.error(`Voice error: ${err.message}`);
+            setIsVoiceMode(false);
+        }
+    });
+
+    // Debug: Log Voice State changes in the console
+    useEffect(() => {
+        if (isVoiceMode && state?.fsmState) {
+            console.log(`[Simulator] Voice State: ${state.fsmState} | status: ${state.status}`);
+        }
+    }, [state?.fsmState, state?.status, isVoiceMode]);
+
+    // Handle Voice Mode Toggle
+    useEffect(() => {
+        const canConnect = webrtcStatus === 'idle' || webrtcStatus === 'disconnected' || webrtcStatus === 'failed';
+
+        if (isVoiceMode && state?.sessionId && canConnect) {
+            connectWebRTC();
+        } else if (!isVoiceMode && (webrtcStatus === 'connected' || webrtcStatus === 'connecting')) {
+            disconnectWebRTC();
+        }
+    }, [isVoiceMode, state?.sessionId, webrtcStatus, connectWebRTC, disconnectWebRTC]);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const playedMessageIds = useRef<Set<string>>(new Set());
@@ -321,21 +386,61 @@ export function LiveSimulator({
 
                         <div className="flex items-center gap-3 pr-8">
                             {state?.sessionId && (
-                                <div className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-medium transition-all duration-500",
-                                    state.connectionStatus === 'connected' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                        state.connectionStatus === 'connecting' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse' :
-                                            'bg-red-500/10 text-red-500 border-red-500/20'
-                                )}>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setIsVoiceMode(!isVoiceMode)}
+                                        className={cn(
+                                            "h-8 gap-2 px-3 rounded-full border transition-all duration-300",
+                                            isVoiceMode
+                                                ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                                                : "bg-muted text-muted-foreground border-transparent hover:bg-muted/80"
+                                        )}
+                                        title={isVoiceMode ? "Disable Voice Mode" : "Enable Real-time Voice Mode"}
+                                    >
+                                        {isVoiceMode ? (
+                                            <>
+                                                <div className="flex flex-col items-start mr-1">
+                                                    <span className="text-[10px] font-bold leading-none">VOICE: ON</span>
+                                                    <div className="flex gap-0.5 mt-0.5 h-1 items-center">
+                                                        {[...Array(5)].map((_, i) => (
+                                                            <div
+                                                                key={i}
+                                                                className={cn(
+                                                                    "w-1 h-full rounded-full transition-all duration-75",
+                                                                    webrtcAudioLevel > (i * 20) ? "bg-primary" : "bg-primary/20"
+                                                                )}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <AudioLines className={cn("h-3.5 w-3.5", webrtcAudioLevel > 10 ? "animate-pulse" : "")} />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <MicOff className="h-3.5 w-3.5 opacity-50" />
+                                                <span className="text-[10px] font-bold">VOICE: OFF</span>
+                                            </>
+                                        )}
+                                    </Button>
+
                                     <div className={cn(
-                                        "h-1.5 w-1.5 rounded-full",
-                                        state.connectionStatus === 'connected' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse' :
-                                            state.connectionStatus === 'connecting' ? 'bg-amber-500' :
-                                                'bg-red-500'
-                                    )} />
-                                    {state.connectionStatus === 'connected' ? 'LIVE' :
-                                        state.connectionStatus === 'connecting' ? 'SYNCING' :
-                                            'OFFLINE'}
+                                        "flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-medium transition-all duration-500",
+                                        state.connectionStatus === 'connected' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                            state.connectionStatus === 'connecting' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse' :
+                                                'bg-red-500/10 text-red-500 border-red-500/20'
+                                    )}>
+                                        <div className={cn(
+                                            "h-1.5 w-1.5 rounded-full",
+                                            state.connectionStatus === 'connected' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse' :
+                                                state.connectionStatus === 'connecting' ? 'bg-amber-500' :
+                                                    'bg-red-500'
+                                        )} />
+                                        {state.connectionStatus === 'connected' ? 'SYNCED' :
+                                            state.connectionStatus === 'connecting' ? 'SYNCING' :
+                                                'OFFLINE'}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -563,20 +668,46 @@ export function LiveSimulator({
                                     title={isRecording ? "Stop recording" : "Start voice input"}
                                 >
                                     {/* Audio level indicator */}
-                                    {isRecording && (
+                                    {(isRecording || isVoiceMode) && (
                                         <div
-                                            className="absolute inset-0 bg-red-500/30 transition-all duration-75"
-                                            style={{ transform: `scaleY(${audioLevel / 100})`, transformOrigin: 'bottom' }}
+                                            className={cn(
+                                                "absolute inset-0 transition-all duration-75",
+                                                isRecording ? "bg-red-500/30" : "bg-primary/30"
+                                            )}
+                                            style={{
+                                                transform: `scaleY(${(isVoiceMode ? webrtcAudioLevel : audioLevel) / 100})`,
+                                                transformOrigin: 'bottom'
+                                            }}
                                         />
                                     )}
                                     {voiceStatus === 'processing' ? (
                                         <Loader2 className="h-4 w-4 animate-spin relative z-10" />
-                                    ) : isRecording ? (
+                                    ) : (isRecording || isVoiceMode) ? (
                                         <MicOff className="h-4 w-4 relative z-10" />
                                     ) : (
                                         <Mic className="h-4 w-4 relative z-10" />
                                     )}
                                 </Button>
+
+                                {isVoiceMode && (
+                                    <div className="flex flex-col gap-1 pr-2">
+                                        <div className="flex gap-1 animate-in fade-in slide-in-from-right-1">
+                                            <Badge variant="outline" className="text-[8px] h-4 bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-1 py-0">LIVE AUDIO</Badge>
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    "text-[8px] h-4 px-1 py-0 transition-colors uppercase font-bold",
+                                                    (state as any)?.fsmState === 'LISTENING' ? "bg-blue-500/20 text-blue-400 border-blue-500/30" :
+                                                        (state as any)?.fsmState === 'SPEAKING' ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+                                                            (state as any)?.fsmState === 'THINKING' ? "bg-amber-500/20 text-amber-400 border-amber-500/30 font-bold animate-pulse" :
+                                                                "bg-muted text-muted-foreground border-muted-foreground/20"
+                                                )}
+                                            >
+                                                {(state as any)?.fsmState || 'IDLE'}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Webhook Trigger Mode Indicator */}
                                 {state?.webhookSlug && (
@@ -636,13 +767,19 @@ export function LiveSimulator({
                             </div>
 
                             {/* Voice status indicator */}
-                            {(isRecording || voiceStatus === 'processing') && (
+                            {(isRecording || voiceStatus === 'processing' || (isVoiceMode && webrtcStatus === 'connected')) && (
                                 <div className="flex items-center gap-2 mt-2 px-2 text-xs text-muted-foreground animate-in fade-in slide-in-from-bottom-1">
-                                    <AudioLines className={cn("h-3 w-3", isRecording && "text-red-500 animate-pulse")} />
-                                    <span>
+                                    <AudioLines className={cn(
+                                        "h-3 w-3",
+                                        isRecording ? "text-red-500 animate-pulse" :
+                                            isVoiceMode ? "text-primary animate-pulse" : ""
+                                    )} />
+                                    <span className="font-medium tracking-tight">
                                         {isRecording
                                             ? `Recording... (${Math.round(audioLevel)}% volume)`
-                                            : 'Transcribing audio...'}
+                                            : isVoiceMode
+                                                ? `Voice Mode Active — ${webrtcAudioLevel > 5 ? 'I can hear you' : 'Silence'}`
+                                                : 'Transcribing audio...'}
                                     </span>
                                 </div>
                             )}
@@ -804,6 +941,8 @@ export function LiveSimulator({
                         </Button>
                     </div>
                 )}
+                {/* Remote WebRTC Audio */}
+                <RemoteAudio track={remoteTrack} />
             </SheetContent>
         </Sheet>
     );

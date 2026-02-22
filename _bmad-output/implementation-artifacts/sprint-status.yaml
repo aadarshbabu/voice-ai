@@ -88,3 +88,13 @@ development_status:
   9-1-streaming-tts-adapter-google-ai: backlog
   9-2-audio-visualization-ui: backlog
   epic-9-retrospective: optional
+
+  epic-10: in-progress
+  10-1-real-time-event-schema-and-turn-taking-fsm: review
+  10-2-engine-orchestrator-wrapper: review
+  epic-10-retrospective: optional
+
+  epic-11: in-progress
+  11-1-webrtc-audio-transport: review
+  11-2-sip-rtp-media-gateway: ready-for-dev
+  epic-11-retrospective: optional

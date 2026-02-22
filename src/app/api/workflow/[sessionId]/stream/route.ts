@@ -44,7 +44,7 @@ export async function GET(
       // --- PUB/SUB HANDLERS ---
       
       const onUpdate = (data: any) => {
-        console.log(`[SSE] Pushing update for session: ${sessionId}`);
+        console.log(`[SSE] Pushing update for ${sessionId} | status: ${data.status} | fsm: ${data.fsmState} | transcript: ${data.context?.transcript?.length || 0} msgs`);
         sendEvent('update', data);
       };
 

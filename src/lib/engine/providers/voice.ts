@@ -388,8 +388,16 @@ async function deepgramSTT(
   const baseUrl = config.baseUrl || "https://api.deepgram.com/v1";
   const audioBuffer = Buffer.from(audioBase64, "base64");
 
+  const query = new URLSearchParams({
+    model: 'nova-2',
+    smart_format: 'true',
+    language: getDeepgramLang(options?.language),
+    encoding: 'linear16',
+    sample_rate: '16000',
+  });
+
   const response = await fetch(
-    `${baseUrl}/listen?model=nova-2&smart_format=true&language=${getDeepgramLang(options?.language)}`,
+    `${baseUrl}/listen?${query.toString()}`,
     {
       method: "POST",
       headers: {
@@ -431,9 +439,10 @@ async function googleSTT(
     "audio/mp4": "MP4",
     "audio/mpeg": "MP3",
     "audio/wav": "LINEAR16",
+    "audio/pcm": "LINEAR16",
   };
 
-  const encoding = encodingMap[mimeType] || "WEBM_OPUS";
+  const encoding = encodingMap[mimeType] || "LINEAR16";
 
   const response = await fetch(
     `https://speech.googleapis.com/v1/speech:recognize?key=${config.apiKey}`,
