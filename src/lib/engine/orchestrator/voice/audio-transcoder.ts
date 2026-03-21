@@ -3,7 +3,7 @@
 // ============================================
 // Provides encoding and decoding between Opus
 // audio frames and raw PCM samples. Designed for
-// real-time WebRTC audio processing.
+// real-time voice audio processing.
 //
 // Uses a lightweight in-process implementation
 // rather than native bindings or WASM to avoid
