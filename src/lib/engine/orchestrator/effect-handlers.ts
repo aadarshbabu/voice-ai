@@ -86,6 +86,11 @@ export interface PrismaLike {
       };
     }) => Promise<unknown>;
   };
+  executionTrace?: {
+    createMany: (args: {
+      data: any[];
+    }) => Promise<unknown>;
+  };
 }
 
 /**

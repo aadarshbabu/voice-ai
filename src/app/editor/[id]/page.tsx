@@ -44,6 +44,7 @@ function EditorContent() {
     const [isValid, setIsValid] = useState(true);
     const [isSimOpen, setIsSimOpen] = useState(false);
     const [isLiveSimOpen, setIsLiveSimOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState("editor");
 
     // Initial nodes/edges tracking for simulator
     const [currentNodes, setCurrentNodes] = useState<Node[]>([]);
@@ -83,7 +84,7 @@ function EditorContent() {
     };
 
     return (
-        <div className="flex flex-col h-screen max-h-screen bg-background overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-screen max-h-screen bg-background overflow-hidden">
             {/* Editor Header */}
             <header className="border-b px-6 py-2 flex items-center justify-between shrink-0 bg-card/50 backdrop-blur-md z-10">
                 <div className="flex items-center gap-4">
@@ -145,12 +146,10 @@ function EditorContent() {
                     </div>
                 </div>
 
-                <Tabs defaultValue="editor" className="w-auto">
-                    <TabsList className="grid w-[240px] grid-cols-2 h-9">
-                        <TabsTrigger value="editor" className="text-xs">Editor</TabsTrigger>
-                        <TabsTrigger value="sessions" className="text-xs">Sessions</TabsTrigger>
-                    </TabsList>
-                </Tabs>
+                <TabsList className="grid w-[240px] grid-cols-2 h-9">
+                    <TabsTrigger value="editor" className="text-xs">Editor</TabsTrigger>
+                    <TabsTrigger value="sessions" className="text-xs">Sessions</TabsTrigger>
+                </TabsList>
 
                 <div className="flex items-center gap-2">
                     {!isValid && (
@@ -159,35 +158,16 @@ function EditorContent() {
                         </span>
                     )}
 
-                    {/* Test Button with Dropdown */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-2 h-9"
-                            >
-                                <Play className="h-4 w-4 fill-current" />
-                                Test
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => setIsSimOpen(true)} className="gap-2">
-                                <FlaskConical className="h-4 w-4" />
-                                <div className="flex flex-col">
-                                    <span className="font-medium">Mock Test</span>
-                                    <span className="text-xs text-muted-foreground">Step-by-step simulation</span>
-                                </div>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setIsLiveSimOpen(true)} className="gap-2">
-                                <Sparkles className="h-4 w-4" />
-                                <div className="flex flex-col">
-                                    <span className="font-medium">Live Test</span>
-                                    <span className="text-xs text-muted-foreground">Real AI responses</span>
-                                </div>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    {/* Test Simulator */}
+                    <Button
+                        onClick={() => setIsLiveSimOpen(true)}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 h-9"
+                    >
+                        <Play className="h-4 w-4 fill-current" />
+                        Test
+                    </Button>
 
                     <Button
                         onClick={onPublish}
@@ -198,33 +178,32 @@ function EditorContent() {
                         {publishMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
                         {publishMutation.isPending ? "Publishing..." : "Publish"}
                     </Button>
+
                 </div>
             </header>
 
-            <Tabs defaultValue="editor" className="flex-1 flex flex-col overflow-hidden">
-                <TabsContent value="editor" className="flex-1 m-0 p-0 border-none outline-none relative overflow-hidden flex">
-                    <NodePalette />
-                    <WorkflowCanvas
-                        workflowId={id}
-                        onValidationChange={handleValidationChange}
-                        activeNodeId={simState.currentNodeId}
-                        onChange={handleChange}
-                    />
-                </TabsContent>
-                <TabsContent value="sessions" className="flex-1 m-0 p-0 border-none outline-none overflow-hidden bg-muted/5">
-                    <SessionsTab workflowId={id} />
-                </TabsContent>
-            </Tabs>
+            <TabsContent value="editor" className="flex-1 m-0 p-0 border-none outline-none relative overflow-hidden flex data-[state=inactive]:hidden">
+                <NodePalette />
+                <WorkflowCanvas
+                    workflowId={id}
+                    onValidationChange={handleValidationChange}
+                    activeNodeId={simState.currentNodeId}
+                    onChange={handleChange}
+                />
+            </TabsContent>
+            <TabsContent value="sessions" className="flex-1 m-0 p-0 border-none outline-none overflow-hidden bg-muted/5 data-[state=inactive]:hidden">
+                <SessionsTab workflowId={id} />
+            </TabsContent>
 
             {/* Mock Simulator */}
-            <WorkflowSimulator
+            {/* <WorkflowSimulator
                 isOpen={isSimOpen}
                 onClose={() => setIsSimOpen(false)}
                 state={simState}
                 onStart={start}
                 onNext={next}
                 onReset={reset}
-            />
+            /> */}
 
             {/* Live Simulator with Real AI */}
             <LiveSimulator
@@ -232,7 +211,7 @@ function EditorContent() {
                 onClose={() => setIsLiveSimOpen(false)}
                 workflowId={id}
             />
-        </div>
+        </Tabs>
     );
 }
 

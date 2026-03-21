@@ -128,7 +128,7 @@ function SessionDetailContent() {
                 </aside>
 
                 {/* Main Canvas Area */}
-                <main className="flex-1 relative bg-muted/10">
+                <main className="flex-1 flex flex-col relative bg-muted/10 min-h-0">
                     <WorkflowCanvas
                         workflowId={id}
                         readOnly={true}

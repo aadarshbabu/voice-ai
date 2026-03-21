@@ -9,6 +9,7 @@ import { turnReducer } from './turn-machine';
 import type { OrchestratorConfig, PrismaLike, EffectHandlers } from './effect-handlers';
 import type { ExecutionContext, LLMConfig, AdvanceResult } from '../types';
 import { runWorkflowUntilWait } from '../runner';
+import { buildTracePayload } from '../tracer';
 import { sessionEmitter } from '../session-emitter';
 import type { Node, Edge } from '@xyflow/react';
 
@@ -243,16 +244,37 @@ export class EngineOrchestrator {
       }
 
       // 3. Call the existing engine — the "consultant"
+      const collectedTraces: any[] = [];
+      const onProgress = async (ctx: ExecutionContext, action?: any, nodeId?: string) => {
+        if (nodeId && action) {
+          collectedTraces.push(buildTracePayload(nodeId, action, ctx));
+        }
+      };
+
       const result: AdvanceResult = await runWorkflowUntilWait(
         nodes,
         edges,
         context,
         transcript,
         this.llmConfig,
+        onProgress
       );
 
       // 4. Persist updated context
       await this.saveExecutionContext(result.context);
+
+      // 4b. Persist execution traces generically via the injected proxy
+      if (collectedTraces.length > 0 && this.prisma.executionTrace?.createMany) {
+        await this.prisma.executionTrace.createMany({
+          data: collectedTraces.map((trace) => ({
+            sessionId: this.sessionId,
+            nodeId: trace.nodeId,
+            inputVariables: trace.inputVariables,
+            outputData: trace.outputData,
+            logs: trace.logs,
+          })),
+        });
+      }
 
       // 5. Map AdvanceResult → VoiceEvent and re-dispatch
       const mappedEvent = this.mapAdvanceResultToEvent(result);

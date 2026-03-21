@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { runWorkflowUntilWait } from '@/lib/engine/runner';
 import { type ExecutionContext, type LLMConfig } from '@/lib/engine/types';
 import { sessionEmitter } from '@/lib/engine/session-emitter';
+import { buildTracePayload } from '@/lib/engine/tracer';
 import { type Node, type Edge } from '@xyflow/react';
 
 // Extended context that includes LLM config for persistence
@@ -166,7 +167,9 @@ export const executeWorkflow = inngest.createFunction(
         userId: workflow.userId,
       };
 
-      const onProgress = async (currentCtx: ExecutionContext) => {
+      const collectedTraces: any[] = [];
+
+      const onProgress = async (currentCtx: ExecutionContext, action?: any, nodeId?: string) => {
         // Find session for current status
         const status = currentCtx.status === 'completed' ? 'COMPLETED' :
                       currentCtx.status === 'error' ? 'ERROR' : 'ACTIVE';
@@ -176,9 +179,15 @@ export const executeWorkflow = inngest.createFunction(
           status,
           context: currentCtx,
         });
+
+        // Whenever a node completes, extract a trace using the external trace builder
+        if (nodeId && action) {
+          collectedTraces.push(buildTracePayload(nodeId, action, currentCtx));
+        }
       };
       
-      return runWorkflowUntilWait(nodes, edges, context, effectiveUserInput, enhancedLlmConfig, onProgress);
+      const advResult = await runWorkflowUntilWait(nodes, edges, context, effectiveUserInput, enhancedLlmConfig, onProgress);
+      return { ...advResult, traces: collectedTraces };
     });
 
     context = result.context;
@@ -203,9 +212,17 @@ export const executeWorkflow = inngest.createFunction(
         },
       });
 
-      // Save trace for speak actions
-      if (result.action.type === 'speak') {
-        await saveTrace(sessionId, result.action.nodeId, {}, { text: result.action.text });
+      // Save all collected execution traces from this run
+      if (result.traces && result.traces.length > 0) {
+        await prisma.executionTrace.createMany({
+          data: result.traces.map((trace: any) => ({
+            sessionId,
+            nodeId: trace.nodeId,
+            inputVariables: trace.inputVariables as object,
+            outputData: trace.outputData as object,
+            logs: trace.logs,
+          })),
+        });
       }
 
       // NO POLLING: Notify the SSE stream instantly

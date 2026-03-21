@@ -48,6 +48,7 @@ import {
     VolumeX,
     Webhook,
     X,
+    ChevronDown,
 } from 'lucide-react';
 import { useWorkflowExecution } from '@/hooks/use-workflow-execution';
 import { useVoiceRecorder } from '@/hooks/use-voice-recorder';
@@ -97,6 +98,7 @@ export function LiveSimulator({
 }: LiveSimulatorProps) {
     const [userInput, setUserInput] = useState('');
     const [showSettings, setShowSettings] = useState(false);
+    const [showContext, setShowContext] = useState(false);
     const [viewMode, setViewMode] = useState<'list' | 'json'>('list');
 
     // LLM Configuration
@@ -360,20 +362,17 @@ export function LiveSimulator({
                 {/* Visual Header Background */}
                 <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
 
-                <SheetHeader className="p-6 pb-4 border-b relative shrink-0">
+                <SheetHeader className="p-2 border-b relative shrink-0">
                     <div className="flex justify-between items-start">
                         <div className="space-y-1">
                             <SheetTitle className="flex items-center gap-2 text-xl font-bold tracking-tight">
                                 <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10 shadow-sm">
-                                    <Sparkles className="h-5 w-5 text-primary" />
+                                    <Sparkles className="h-4 w- text-primary" />
                                 </div>
                                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-                                    Live Simulator
+                                    Simulator
                                 </span>
                             </SheetTitle>
-                            <SheetDescription className="text-sm">
-                                Real-time execution of your workflow engine
-                            </SheetDescription>
                         </div>
 
                         <div className="flex items-center gap-3 pr-8">
@@ -439,7 +438,7 @@ export function LiveSimulator({
                     </div>
                 </SheetHeader>
 
-                <div className="flex-1 flex flex-col min-h-0 relative z-10 px-6 py-4 gap-4 overflow-hidden">
+                <div className="flex-1 flex flex-col min-h-0 relative z-10 px-6 gap-4 overflow-hidden">
                     {/* Controls & Mini Settings */}
                     <div className="flex flex-col gap-3 shrink-0">
                         <div className="flex items-center gap-2">
@@ -778,118 +777,129 @@ export function LiveSimulator({
                         </div>
                     </div>
 
-                    {/* Variables & State Inspector */}
-                    <div className="h-[180px] flex flex-col gap-2 shrink-0">
-                        <div className="flex items-center justify-between px-1">
-                            <div className="flex items-center gap-2 group">
-                                <Variable className="h-3.5 w-3.5 text-primary" />
-                                <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground px-0.5">Context</span>
-                                <Badge variant="secondary" className="h-4 min-w-4 rounded-full text-[9px] px-1 bg-primary/10 text-primary border-none">
-                                    {Object.keys(state?.variables ?? {}).length}
-                                </Badge>
-
-                                <div className="ml-2 flex items-center gap-1 bg-muted/50 p-0.5 rounded-lg border border-muted-foreground/10 h-7">
-                                    <Button
-                                        variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                                        size="icon"
-                                        className={cn("h-6 w-6 rounded-md", viewMode === 'list' && "bg-background shadow-sm")}
-                                        onClick={() => setViewMode('list')}
-                                        title="List View"
-                                    >
-                                        <List className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button
-                                        variant={viewMode === 'json' ? 'secondary' : 'ghost'}
-                                        size="icon"
-                                        className={cn("h-6 w-6 rounded-md", viewMode === 'json' && "bg-background shadow-sm")}
-                                        onClick={() => setViewMode('json')}
-                                        title="JSON View"
-                                    >
-                                        <Code2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                </div>
-                            </div>
-                            {state?.currentNodeId && (
-                                <div className="flex items-center gap-1.5 group">
-                                    <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[10px] font-mono text-muted-foreground group-hover:text-foreground transition-colors">
-                                        {state.currentNodeId.slice(0, 8)}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex-1 rounded-2xl border border-muted-foreground/10 bg-muted/20 backdrop-blur-sm overflow-hidden flex flex-col relative group">
-                            <div className="flex-1 h-full overflow-hidden flex flex-col">
-                                {Object.keys(state?.variables ?? {}).length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center flex-1 opacity-40">
-                                        <p className="text-[10px] italic">No active variables</p>
-                                    </div>
-                                ) : (
-                                    viewMode === 'list' ? (
-                                        <ScrollArea className="flex-1 h-full">
-                                            <div className="p-2 space-y-1">
-                                                {Object.entries(state?.variables ?? {}).map(([key, value]) => (
-                                                    <div
-                                                        key={key}
-                                                        className="flex items-center justify-between p-2 rounded-lg bg-card/40 border border-transparent hover:border-muted-foreground/20 hover:bg-card/80 transition-all group/item"
-                                                    >
-                                                        <div className="flex items-center gap-2 max-w-[60%]">
-                                                            <div className="p-1 rounded bg-background border border-muted-foreground/10">
-                                                                {typeof value === 'number' ? <Hash className="h-3 w-3 text-blue-400" /> :
-                                                                    typeof value === 'boolean' ? <ToggleLeft className="h-3 w-3 text-emerald-400" /> :
-                                                                        <Type className="h-3 w-3 text-amber-400" />}
-                                                            </div>
-                                                            <span className="text-[11px] font-mono font-medium truncate">{key}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-right">
-                                                            <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">
-                                                                {typeof value === 'object' ? JSON.stringify(value).slice(0, 20) + '...' : String(value)}
-                                                            </span>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-5 w-5 opacity-0 group-hover/item:opacity-100 transition-opacity"
-                                                                onClick={() => {
-                                                                    navigator.clipboard.writeText(JSON.stringify(value, null, 2));
-                                                                    toast.success(`Copied ${key}`);
-                                                                }}
-                                                            >
-                                                                <Copy className="h-2.5 w-2.5" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </ScrollArea>
-                                    ) : (
-                                        <div className="flex-1 h-full flex flex-col overflow-hidden relative">
-                                            <div className="absolute top-1 right-2 z-20">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6 bg-background/50 backdrop-blur"
-                                                    onClick={() => {
-                                                        navigator.clipboard.writeText(JSON.stringify(state?.variables, null, 2));
-                                                        toast.success("Full context copied");
-                                                    }}
-                                                >
-                                                    <Copy className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                            <ScrollArea className="flex-1 h-full">
-                                                <pre className="p-3 text-[10px] font-mono leading-relaxed text-muted-foreground overflow-x-auto">
-                                                    <code className="block">
-                                                        {JSON.stringify(state?.variables, null, 2)}
-                                                    </code>
-                                                </pre>
-                                            </ScrollArea>
+                    {/* Variables & State Inspector - Collapsible */}
+                    <Collapsible open={showContext} onOpenChange={setShowContext} className="shrink-0">
+                        <CollapsibleTrigger asChild>
+                            <button className="flex items-center justify-between w-full px-1 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/40 transition-colors group cursor-pointer">
+                                <div className="flex items-center gap-2">
+                                    <Variable className="h-3.5 w-3.5 text-primary" />
+                                    <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground px-0.5">Context</span>
+                                    <Badge variant="secondary" className="h-4 min-w-4 rounded-full text-[9px] px-1 bg-primary/10 text-primary border-none">
+                                        {Object.keys(state?.variables ?? {}).length}
+                                    </Badge>
+                                    {state?.currentNodeId && (
+                                        <div className="flex items-center gap-1.5 ml-2">
+                                            <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+                                            <span className="text-[10px] font-mono text-muted-foreground">
+                                                {state.currentNodeId.slice(0, 8)}
+                                            </span>
                                         </div>
-                                    )
-                                )}
+                                    )}
+                                </div>
+                                <ChevronDown className={cn(
+                                    "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+                                    showContext && "rotate-180"
+                                )} />
+                            </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="animate-in slide-in-from-top-1 duration-200">
+                            <div className="flex flex-col gap-2 mt-1">
+                                <div className="flex items-center justify-end px-1">
+                                    <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-lg border border-muted-foreground/10 h-7">
+                                        <Button
+                                            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                                            size="icon"
+                                            className={cn("h-6 w-6 rounded-md", viewMode === 'list' && "bg-background shadow-sm")}
+                                            onClick={() => setViewMode('list')}
+                                            title="List View"
+                                        >
+                                            <List className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                            variant={viewMode === 'json' ? 'secondary' : 'ghost'}
+                                            size="icon"
+                                            className={cn("h-6 w-6 rounded-md", viewMode === 'json' && "bg-background shadow-sm")}
+                                            onClick={() => setViewMode('json')}
+                                            title="JSON View"
+                                        >
+                                            <Code2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="h-[180px] rounded-2xl border border-muted-foreground/10 bg-muted/20 backdrop-blur-sm overflow-hidden flex flex-col relative group">
+                                    <div className="flex-1 h-full overflow-hidden flex flex-col">
+                                        {Object.keys(state?.variables ?? {}).length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center flex-1 opacity-40">
+                                                <p className="text-[10px] italic">No active variables</p>
+                                            </div>
+                                        ) : (
+                                            viewMode === 'list' ? (
+                                                <ScrollArea className="flex-1 h-full">
+                                                    <div className="p-2 space-y-1">
+                                                        {Object.entries(state?.variables ?? {}).map(([key, value]) => (
+                                                            <div
+                                                                key={key}
+                                                                className="flex items-center justify-between p-2 rounded-lg bg-card/40 border border-transparent hover:border-muted-foreground/20 hover:bg-card/80 transition-all group/item"
+                                                            >
+                                                                <div className="flex items-center gap-2 max-w-[60%]">
+                                                                    <div className="p-1 rounded bg-background border border-muted-foreground/10">
+                                                                        {typeof value === 'number' ? <Hash className="h-3 w-3 text-blue-400" /> :
+                                                                            typeof value === 'boolean' ? <ToggleLeft className="h-3 w-3 text-emerald-400" /> :
+                                                                                <Type className="h-3 w-3 text-amber-400" />}
+                                                                    </div>
+                                                                    <span className="text-[11px] font-mono font-medium truncate">{key}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 text-right">
+                                                                    <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">
+                                                                        {typeof value === 'object' ? JSON.stringify(value).slice(0, 20) + '...' : String(value)}
+                                                                    </span>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-5 w-5 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                                                        onClick={() => {
+                                                                            navigator.clipboard.writeText(JSON.stringify(value, null, 2));
+                                                                            toast.success(`Copied ${key}`);
+                                                                        }}
+                                                                    >
+                                                                        <Copy className="h-2.5 w-2.5" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </ScrollArea>
+                                            ) : (
+                                                <div className="flex-1 h-full flex flex-col overflow-hidden relative">
+                                                    <div className="absolute top-1 right-2 z-20">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 bg-background/50 backdrop-blur"
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText(JSON.stringify(state?.variables, null, 2));
+                                                                toast.success("Full context copied");
+                                                            }}
+                                                        >
+                                                            <Copy className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                    <ScrollArea className="flex-1 h-full">
+                                                        <pre className="p-3 text-[10px] font-mono leading-relaxed text-muted-foreground overflow-x-auto">
+                                                            <code className="block">
+                                                                {JSON.stringify(state?.variables, null, 2)}
+                                                            </code>
+                                                        </pre>
+                                                    </ScrollArea>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        </CollapsibleContent>
+                    </Collapsible>
                 </div>
 
                 {/* Footer Status Bar */}

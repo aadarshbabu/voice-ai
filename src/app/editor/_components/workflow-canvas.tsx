@@ -19,7 +19,7 @@ import {
     type Node,
 } from '@xyflow/react';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTRPC } from '@/lib/trpcClient';
 import { useDebounce } from '@/hooks/use-debounce';
 import { toast } from 'sonner';
@@ -74,6 +74,7 @@ export function WorkflowCanvas({ workflowId, onValidationChange, activeNodeId, o
 
 function CanvasInner({ workflowId, onValidationChange, activeNodeId, onChange, readOnly }: WorkflowCanvasProps) {
     const trpc = useTRPC();
+    const queryClient = useQueryClient();
     const { screenToFlowPosition } = useReactFlow();
 
     // Fetch initial data
@@ -95,14 +96,23 @@ function CanvasInner({ workflowId, onValidationChange, activeNodeId, onChange, r
     // Refs for stability and to prevent save loops
     const lastSavedDataRef = React.useRef<string>("");
     const isInitializedRef = React.useRef(false);
+    const latestNodesRef = React.useRef<Node[]>([]);
+    const latestEdgesRef = React.useRef<Edge[]>([]);
     const prevWorkflowIdRef = React.useRef<string>("");
+    // Tracks whether the debounced values have updated at least once AFTER initialization.
+    // Prevents saving stale pre-init empty arrays when isLoading changes.
+    const hasDebouncedSinceInitRef = React.useRef(false);
+    // Snapshot of the node count at initialization time, used to detect empty saves
+    const initialNodeCountRef = React.useRef(0);
 
     // Reset initialization when workflowId changes
     useEffect(() => {
         if (workflowId !== prevWorkflowIdRef.current) {
             prevWorkflowIdRef.current = workflowId;
             isInitializedRef.current = false;
+            hasDebouncedSinceInitRef.current = false;
             lastSavedDataRef.current = "";
+            initialNodeCountRef.current = 0;
         }
     }, [workflowId]);
 
@@ -134,6 +144,8 @@ function CanvasInner({ workflowId, onValidationChange, activeNodeId, onChange, r
             // Set the initial reference so we don't save immediately
             lastSavedDataRef.current = JSON.stringify({ nodes: initialNodes, edges: initialEdges });
             isInitializedRef.current = true;
+            hasDebouncedSinceInitRef.current = false;
+            initialNodeCountRef.current = initialNodes.length;
         }
     }, [workflow, isLoading, workflowId, setNodes, setEdges]);
 
@@ -141,6 +153,19 @@ function CanvasInner({ workflowId, onValidationChange, activeNodeId, onChange, r
 
     const debouncedNodes = useDebounce(nodes, 2000);
     const debouncedEdges = useDebounce(edges, 2000);
+
+    // Track when debounced values update post-initialization
+    useEffect(() => {
+        if (isInitializedRef.current && debouncedNodes.length > 0) {
+            hasDebouncedSinceInitRef.current = true;
+        }
+    }, [debouncedNodes, debouncedEdges]);
+
+    // Keep refs in sync for flush-on-unmount
+    useEffect(() => {
+        latestNodesRef.current = nodes;
+        latestEdgesRef.current = edges;
+    }, [nodes, edges]);
 
     // Validation effect - run more frequently than save
     useEffect(() => {
@@ -152,14 +177,26 @@ function CanvasInner({ workflowId, onValidationChange, activeNodeId, onChange, r
     }, [nodes, edges, onValidationChange, onChange]);
 
     // Auto-save effect
+    // IMPORTANT: isLoading is intentionally NOT in the dependency array.
+    // Including it caused a race condition: when isLoading changed to false,
+    // it would trigger a save with stale debounced values (empty []) before
+    // the 2s debounce had time to update with the real initialized data.
     useEffect(() => {
         const performSave = async () => {
-            if (!isInitializedRef.current || isLoading || readOnly) return;
+            if (!isInitializedRef.current || readOnly) return;
+            // Don't save until debounced values have updated at least once post-init
+            if (!hasDebouncedSinceInitRef.current) return;
 
             const currentData = JSON.stringify({ nodes: debouncedNodes, edges: debouncedEdges });
 
             // Skip if no changes from last successful save
             if (currentData === lastSavedDataRef.current) return;
+
+            // Safety: never overwrite a multi-node workflow with empty/default-only data
+            if (debouncedNodes.length === 0 && initialNodeCountRef.current > 0) {
+                console.warn('[WorkflowCanvas] Blocked save of empty nodes — likely a race condition');
+                return;
+            }
 
             setIsSaving(true);
             setSaveError(null);
@@ -171,6 +208,8 @@ function CanvasInner({ workflowId, onValidationChange, activeNodeId, onChange, r
                 });
                 lastSavedDataRef.current = currentData;
                 setLastSaved(new Date());
+                // Invalidate the query cache so re-mounts get the latest saved data
+                queryClient.invalidateQueries({ queryKey: trpc.workflow.get.queryKey({ id: workflowId }) });
             } catch (err: unknown) {
                 const message = err instanceof Error ? err.message : 'Failed to save';
                 setSaveError(message);
@@ -181,7 +220,38 @@ function CanvasInner({ workflowId, onValidationChange, activeNodeId, onChange, r
         };
 
         performSave();
-    }, [debouncedNodes, debouncedEdges, workflowId, isLoading]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedNodes, debouncedEdges, workflowId]);
+
+    // Flush unsaved changes on unmount (e.g. navigating to session detail page)
+    useEffect(() => {
+        return () => {
+            if (!isInitializedRef.current || readOnly) return;
+            const nodesToSave = latestNodesRef.current;
+            const edgesToSave = latestEdgesRef.current;
+
+            // Safety: don't overwrite real data with empty/default-only state
+            if (nodesToSave.length === 0) return;
+            if (nodesToSave.length <= 1 && initialNodeCountRef.current > 1) {
+                console.warn('[WorkflowCanvas] Blocked unmount save — would overwrite multi-node workflow with default');
+                return;
+            }
+
+            const currentData = JSON.stringify({ nodes: nodesToSave, edges: edgesToSave });
+            if (currentData !== lastSavedDataRef.current) {
+                // Fire-and-forget save of the latest state
+                updateMutation.mutateAsync({
+                    id: workflowId,
+                    nodes: nodesToSave as any,
+                    edges: edgesToSave,
+                }).then(() => {
+                    queryClient.invalidateQueries({ queryKey: trpc.workflow.get.queryKey({ id: workflowId }) });
+                }).catch(() => {
+                    // Silently fail on unmount save — data is best-effort
+                });
+            }
+        };
+    }, [workflowId, readOnly]);
 
     const onConnect = useCallback(
         (params: Connection) => setEdges((eds) => addEdge(params, eds)),

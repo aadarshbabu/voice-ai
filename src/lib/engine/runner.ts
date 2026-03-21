@@ -680,7 +680,7 @@ export async function runWorkflowUntilWait(
   initialContext: ExecutionContext,
   input?: string,
   llmConfig?: Partial<LLMConfig>,
-  onProgress?: (ctx: ExecutionContext) => Promise<void>
+  onProgress?: (ctx: ExecutionContext, action?: AdvanceResult['action'], nodeId?: string) => Promise<void>
 ): Promise<AdvanceResult> {
   let currentContext = { ...initialContext };
   let userInput = input;
@@ -688,6 +688,7 @@ export async function runWorkflowUntilWait(
   const maxSteps = 50;
 
   while (steps < maxSteps) {
+    const prevNodeId = currentContext.currentNodeId || undefined;
     const result = await advanceWorkflowAsync(
       nodes, 
       edges, 
@@ -703,7 +704,7 @@ export async function runWorkflowUntilWait(
 
     // Notify progress for every node execution
     if (onProgress) {
-        await onProgress(currentContext);
+        await onProgress(currentContext, result.action, prevNodeId);
     }
 
     // Stop conditions: only stop if we explicitly need to wait, or we are finished/errored
