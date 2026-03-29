@@ -85,7 +85,7 @@ function SessionDetailContent() {
                     <div className="p-4 border-b bg-muted/50">
                         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Execution Path</h3>
                     </div>
-                    <ScrollArea className="flex-1">
+                    <div className="flex-1 overflow-auto">
                         <div className="p-2 space-y-1">
                             {!session?.traces || session.traces.length === 0 ? (
                                 <div className="text-center py-10 text-muted-foreground italic px-4 text-xs">
@@ -97,13 +97,13 @@ function SessionDetailContent() {
                                         key={trace.id}
                                         onClick={() => setSelectedStepIndex(index)}
                                         className={`w-full flex items-start gap-3 p-3 rounded-lg text-left transition-all group relative ${selectedStepIndex === index
-                                                ? "bg-primary text-primary-foreground shadow-md scale-[1.02] z-10"
-                                                : "hover:bg-accent text-foreground grayscale-[0.5] hover:grayscale-0"
+                                            ? "bg-primary text-primary-foreground shadow-md scale-[1.02] z-10"
+                                            : "hover:bg-accent text-foreground grayscale-[0.5] hover:grayscale-0"
                                             }`}
                                     >
                                         <div className={`mt-0.5 w-6 h-6 flex items-center justify-center rounded-full text-[10px] font-bold shrink-0 ${selectedStepIndex === index
-                                                ? "bg-primary-foreground text-primary"
-                                                : "bg-muted text-muted-foreground"
+                                            ? "bg-primary-foreground text-primary"
+                                            : "bg-muted text-muted-foreground"
                                             }`}>
                                             {index + 1}
                                         </div>
@@ -117,14 +117,14 @@ function SessionDetailContent() {
                                                 </span>
                                             </div>
                                         </div>
-                                        {selectedStepIndex === index && (
-                                            <ChevronRight className="h-4 w-4 absolute right-2 top-1/2 -translate-y-1/2" />
-                                        )}
+                                        {/* {selectedStepIndex === index && (
+                                            <ChevronRight className="h-4 w-4 absolute right-2 top-1/2 -translate-y-1/2 text-primary-foreground rounded-full" />
+                                        )} */}
                                     </button>
                                 ))
                             )}
                         </div>
-                    </ScrollArea>
+                    </div>
                 </aside>
 
                 {/* Main Canvas Area */}
